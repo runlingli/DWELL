@@ -34,7 +34,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 export const Input: React.FC<InputProps> = ({ uppercase = false, className = '', ...props }) => (
   <input 
-    className={`w-full bg-transparent border-b border-[#4a586e]/20 py-4 px-0 focus:border-[#4a586e] outline-none transition-all placeholder:text-[#4a586e]/30 text-[11px] tracking-widest font-bold text-[#4a586e] ${uppercase ? 'uppercase' : ''} ${className}`}
+    className={`w-full bg-transparent border-b border-[#4a586e]/20 py-2 px-0 focus:border-[#4a586e] outline-none transition-all placeholder:text-[#4a586e]/30 text-[11px] tracking-widest font-bold text-[#4a586e] ${uppercase ? 'uppercase' : ''} ${className}`}
     {...props}
   />
 );
@@ -71,11 +71,11 @@ export const Select: React.FC<SelectProps> = ({ options, value, onChange, placeh
 
   return (
     <div className={`relative ${className}`} ref={containerRef}>
-      {label && <label className="text-[8px] font-bold uppercase tracking-widest text-[#7e918b] mb-1 block">{label}</label>}
+      {label && <label className="text-[10px] font-bold uppercase tracking-widest text-[#7e918b] mb-1 block">{label}</label>}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-transparent border-b border-[#4a586e]/20 py-4 px-0 text-left flex justify-between items-center focus:border-[#4a586e] transition-all outline-none"
+        className="w-full bg-transparent border-b border-[#4a586e]/20 py-2 px-0 text-left flex justify-between items-center focus:border-[#4a586e] transition-all outline-none"
       >
         <span className="text-[11px] uppercase tracking-widest font-bold text-[#4a586e]">
           {selectedOption ? selectedOption.label : placeholder}
@@ -95,7 +95,7 @@ export const Select: React.FC<SelectProps> = ({ options, value, onChange, placeh
               <button
                 key={option.value}
                 type="button"
-                className={`w-full text-left px-4 py-3 text-[10px] uppercase tracking-widest font-bold transition-colors border-b border-[#4a586e]/5 last:border-0 ${
+                className={`w-full text-left px-4 py-2 text-[10px] uppercase tracking-widest font-bold transition-colors border-b border-[#4a586e]/5 last:border-0 ${
                   value === option.value 
                     ? 'bg-[#4a586e] text-[#f3e9d2]' 
                     : 'text-[#4a586e] hover:bg-[#4a586e]/5'
@@ -137,7 +137,8 @@ export const Modal: React.FC<ModalProps> = ({
     'lg': 'max-w-lg',
     'xl': 'max-w-xl',
     '4xl': 'max-w-4xl',
-    '6xl': 'max-w-6xl'
+    '5xl': 'max-w-5xl',
+	'6xl': 'max-w-6xl'
   };
 
   return (

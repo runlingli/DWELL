@@ -5,7 +5,21 @@ It includes services for **authentication, mail delivery, logging, a broker API 
 
 The system supports **JWT-based authentication**, **Google OAuth**, **email verification**, **event-driven logging with RabbitMQ**, and **CRUD operations against PostgreSQL**.
 
----
+<div style="display: flex; gap: 1px;">
+
+  <!-- 左边一列 -->
+  <div style="flex: 1.6;">
+    <img src="./public/home_page.png" alt="home page" style="width:100%; height:auto; object-fit:cover;">
+  </div>
+
+  <!-- 右边一列 -->
+  <div style="flex: 1; display: flex; flex-direction: column; gap: 10px;">
+  	<img src="./public/verify_modal.png" alt="Right Bottom" style="width:100%; height:auto; object-fit:cover;">
+    <img src="./public/post.png" alt="Right Top" style="width:100%; height:auto; object-fit:cover;">
+    
+  </div>
+
+</div>
 
 ## Architecture Overview
 

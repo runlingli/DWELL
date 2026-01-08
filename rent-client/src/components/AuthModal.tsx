@@ -166,7 +166,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
           {step === 'VERIFY_CODE' && (
             <div className="space-y-8 py-4">
               <div className="text-center space-y-2">
-                <p className="text-[10px] text-[#7e918b] uppercase tracking-[0.3em] leading-relaxed">
+                <p className="text-[12px] text-[#7e918b] uppercase tracking-[0.3em] leading-relaxed">
                   Verification code sent to
                 </p>
                 <p className="text-[#4a586e] font-bold text-xs uppercase tracking-tighter">

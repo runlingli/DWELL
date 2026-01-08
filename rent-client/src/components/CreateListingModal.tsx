@@ -157,9 +157,9 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ isOpen, 
   };
 
   return (
-    <Modal size="6xl" isOpen={isOpen} onClose={onClose} title={initialData ? "EDIT LISTING" : "NEW LISTING"}>
+    <Modal size="5xl" isOpen={isOpen} onClose={onClose} title={initialData ? "EDIT LISTING" : "NEW LISTING"}>
       <form onSubmit={handleSubmit} className="pb-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-10">
           
           {/* Left Column: Visuals and Spatial */}
           <div className="space-y-10">
@@ -167,7 +167,7 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ isOpen, 
                <label className="text-[10px] font-bold uppercase tracking-widest text-[#4a586e]/60 block">Cover Aesthetic</label>
                <div 
                 onClick={() => fileInputRef.current?.click()}
-                className="aspect-[4/3] w-full border border-[#4a586e]/20 flex flex-col items-center justify-center cursor-pointer hover:bg-neutral-50 transition-colors overflow-hidden group relative"
+                className="h-40 md:h-60 w-full border border-[#4a586e]/20 flex flex-col items-center justify-center cursor-pointer hover:bg-neutral-50 transition-colors overflow-hidden group relative"
               >
                 {formData.imageUrl ? (
                   <>
@@ -190,7 +190,7 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ isOpen, 
 
             <div className="space-y-4">
               <label className="text-[10px] font-bold uppercase tracking-widest text-[#4a586e]/60 block">Geographic Boundary</label>
-              <div ref={mapContainerRef} className="w-full h-64 border border-[#4a586e]/20 grayscale" />
+              <div ref={mapContainerRef} className="w-full h-40 md:h-60 border border-[#4a586e]/20 grayscale" />
               <div className="space-y-4 pt-2">
                 <div className="flex justify-between items-center">
                   <span className="text-[9px] font-bold uppercase tracking-widest text-[#4a586e]">Approx. Radius</span>
@@ -207,9 +207,9 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ isOpen, 
           </div>
 
           {/* Right Column: Information and Specs */}
-          <div className="space-y-10">
-            <div className="space-y-6">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-[#4a586e]/60 block mb-[-1.5rem]">Identity</label>
+          <div className="space-y-7">
+            <div className="">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-[#4a586e]/60 block">Identity</label>
               <Input 
                 placeholder="TITLE" 
                 value={formData.title} 
@@ -218,7 +218,7 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ isOpen, 
                 required 
               />
               
-              <div className="grid grid-cols-2 gap-8">
+              <div className="grid grid-cols-2 gap-4 mt-6">
                 <Select
                   label="Neighborhood"
                   options={NEIGHBORHOOD_OPTIONS}
@@ -234,11 +234,11 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ isOpen, 
               </div>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-2">
                <label className="text-[10px] font-bold uppercase tracking-widest text-[#4a586e]/60 block mb-2">Specifications</label>
                <div className="grid grid-cols-3 gap-8">
                   <div className="flex flex-col">
-                    <label className="text-[8px] font-bold uppercase tracking-widest text-[#7e918b] mb-1">Monthly Price ($)</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#7e918b] mb-1">Monthly Price ($)</label>
                     <Input 
                       placeholder="e.g. 2400" 
                       type="number"
@@ -248,7 +248,7 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ isOpen, 
                     />
                   </div>
                   <div className="flex flex-col">
-                    <label className="text-[8px] font-bold uppercase tracking-widest text-[#7e918b] mb-1">Bedrooms</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#7e918b] mb-1">Bedrooms</label>
                     <Input 
                       placeholder="e.g. 2" 
                       type="number" 
@@ -257,7 +257,7 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ isOpen, 
                     />
                   </div>
                   <div className="flex flex-col">
-                    <label className="text-[8px] font-bold uppercase tracking-widest text-[#7e918b] mb-1">Bathrooms</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#7e918b] mb-1">Bathrooms</label>
                     <Input 
                       placeholder="e.g. 1" 
                       type="number" 
@@ -267,7 +267,7 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ isOpen, 
                   </div>
                </div>
                <div className="flex flex-col pt-2">
-                 <label className="text-[8px] font-bold uppercase tracking-widest text-[#7e918b] mb-1">Location / Cross Streets</label>
+                 <label className="text-[10px] font-bold uppercase tracking-widest text-[#7e918b] mb-1">Location / Cross Streets</label>
                  <Input 
                     placeholder="E.G. NEAR E ST & 2ND" 
                     value={formData.address} 
@@ -278,15 +278,15 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ isOpen, 
                </div>
             </div>
 
-            <div className="space-y-6">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-[#4a586e]/60 block mb-[-1.5rem]">Availability Window</label>
+            <div className="space-y-0.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-[#4a586e]/60 block">Availability Window</label>
               <div className="grid grid-cols-2 gap-8">
                 <div>
-                  <p className="text-[8px] uppercase tracking-widest text-[#7e918b] mb-1 font-bold">From</p>
+                  <p className="text-[10px] uppercase tracking-widest text-[#7e918b] mb-1 font-bold">From</p>
                   <Input type="date" value={formData.availableFrom} onChange={handleFromDateChange} required />
                 </div>
                 <div>
-                  <p className="text-[8px] uppercase tracking-widest text-[#7e918b] mb-1 font-bold">Until</p>
+                  <p className="text-[10px] uppercase tracking-widest text-[#7e918b] mb-1 font-bold">Until</p>
                   <Input type="date" value={formData.availableTo} onChange={e => setFormData({...formData, availableTo: e.target.value})} min={formData.availableFrom} required />
                 </div>
               </div>
@@ -303,8 +303,8 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ isOpen, 
               />
             </div>
 
-            <div className="pt-8">
-               <Button type="submit" className="w-full !py-6 text-sm tracking-[0.4em]">{initialData ? "UPDATE POSTING" : "CONFIRM & PUBLISH"}</Button>
+            <div className="">
+               <Button type="submit" className="w-full !py-4 text-sm tracking-[0.4em]">{initialData ? "UPDATE POSTING" : "CONFIRM & PUBLISH"}</Button>
             </div>
           </div>
         </div>
