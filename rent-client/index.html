@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TinyRent</title>
+    <link href="/src/index.css" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <style>
+      :root {
+        --beige: #f3e9d2;
+        --slate: #4a586e;
+        --sage: #7e918b;
+        --light-sage: #9bb794;
+      }
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: var(--beige);
+        color: var(--slate);
+        margin: 0;
+        padding: 0;
+      }
+      .font-serif {
+        font-family: "Playfair Display", serif;
+      }
+      ::selection {
+        background-color: var(--slate);
+        color: var(--beige);
+      }
+      /* Minimalist Scrollbar */
+      ::-webkit-scrollbar {
+        width: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--beige);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--slate);
+      }
+      /* Monochrome Map Styling - Adjusted for Beige Palette */
+      .leaflet-container {
+        background: var(--beige) !important;
+        filter: grayscale(100%) invert(5%) contrast(90%) sepia(20%);
+      }
+      /* Price Tag Marker Styles */
+      .price-tag-marker {
+        background: var(--beige);
+        border: 1px solid var(--slate);
+        color: var(--slate);
+        padding: 4px 8px;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 4px 4px 0px rgba(74, 88, 110, 0.2);
+        transition: all 0.2s ease;
+        cursor: pointer;
+      }
+      .price-tag-marker:hover {
+        background: var(--slate);
+        color: var(--beige);
+        transform: translate(-2px, -2px);
+        box-shadow: 6px 6px 0px rgba(74, 88, 110, 0.3);
+        z-index: 1000 !important;
+      }
+      .custom-marker {
+        background: var(--slate);
+        border: 2px solid var(--beige);
+        border-radius: 0;
+        width: 12px !important;
+        height: 12px !important;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        cursor: pointer;
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .custom-marker:hover {
+        transform: scale(1.5);
+        background: var(--light-sage);
+        z-index: 1000 !important;
+      }
+      * {
+        -webkit-tap-highlight-color: transparent;
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@^19.2.3",
+          "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+          "react/": "https://esm.sh/react@^19.2.3/"
+        }
+      }
+    </script>
+  </head>
+  <body class="antialiased">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

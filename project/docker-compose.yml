@@ -1,0 +1,148 @@
+services:
+
+  # =====================
+  # Broker 服务
+  # =====================
+  broker-service:
+    build:
+      # 构建上下文路径（broker-service 项目目录）
+      context: ./../broker-service
+      # 使用指定的 Dockerfile
+      dockerfile: broker-service.dockerfile
+    restart: always # 容器异常退出或 Docker 重启时自动拉起
+    ports:
+      - "8080:80" # 宿主机 8080 端口映射到容器 80 端口
+    deploy:
+      mode: replicated # 副本模式
+      replicas: 1 # 启动一个副本
+
+  listener-service:
+    build:
+      context: ./../listener-service
+      # 使用指定的 Dockerfile
+      dockerfile: listener-service.dockerfile
+    deploy:
+      mode: replicated # 副本模式
+      replicas: 1 # 启动一个副本
+
+  mailer-service:
+    build:
+      context: ./../mail-service
+      dockerfile: mail-service.dockerfile
+    restart: always # 容器异常退出或 Docker 重启时自动拉起
+    deploy:
+      mode: replicated # 副本模式
+      replicas: 1 # 启动一个副本
+    environment:
+      MAIL_DOMAIN: ${MAIL_DOMAIN}
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      FROM_NAME: ${FROM_NAME}
+      FROM_ADDRESS: ${FROM_ADDRESS}
+
+  logger-service:
+    build:
+      # 构建上下文路径（broker-service 项目目录）
+      context: ./../logger-service
+      # 使用指定的 Dockerfile
+      dockerfile: logger-service.dockerfile
+    restart: always # 容器异常退出或 Docker 重启时自动拉起
+    deploy:
+      mode: replicated # 副本模式
+      replicas: 1 # 启动一个副本
+
+  # =====================
+  # Authentication 服务
+  # =====================
+  authentication-service:
+    build:
+      context: ./../authentication-service
+      dockerfile: authentication-service.dockerfile
+    restart: always
+    ports:
+      - "8081:80" # 宿主机 8081 端口映射到容器 80 端口
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      # DSN（Data Source Name）：连接 Postgres 数据库的字符串
+      # host=postgres → 服务名对应 docker-compose 内部网络
+      # port=5432 → 数据库端口
+      # user=postgres → 用户名
+      # password=password → 密码
+      # dbname=users → 数据库名
+      # sslmode=disable → 不使用 SSL
+      # timezone=UTC → 时区
+      # connect_timeout=5 → 连接超时时间（秒）
+      DSN: "host=postgres port=5432 user=postgres password=password dbname=users sslmode=disable timezone=UTC connect_timeout=5"
+      REDIS_ADDR: redis:6379
+      REDIS_PASSWORD: ""
+      ACCESS_SECRET: ${ACCESS_SECRET}
+      REFRESH_SECRET: ${REFRESH_SECRET}
+      GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      REDIRECT_URL: ${REDIRECT_URL}
+
+  # =====================
+  # Postgres 数据库服务
+  # =====================
+  postgres:
+    image: 'postgres:14.0' # 使用官方 PostgreSQL 镜像
+    ports:
+      - "5633:5432" # 宿主机 5432 映射到容器 5432
+    restart: always
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      # 数据库初始化配置
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: users
+    volumes:
+      # 将宿主机目录挂载到容器中，保证数据持久化
+      - ./db-data/postgres/:/var/lib/postgresql/data/
+      # The Postgres image stores data in /var/lib/postgresql/data by default. --doc
+
+      # =====================
+      # MongoDB 数据库服务
+      # =====================
+  mongo:
+    image: 'mongo:4.2.16-bionic'
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: logs
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - ./db-data/mongo/:/data/db
+  #mailhog:
+  #  image: 'mailhog/mailhog:latest'
+  #  ports:
+  #    - '1025:1025'
+  #    - '8025:8025'
+
+  rabbitmq:
+    image: 'rabbitmq:3.9-alpine'
+    ports:
+      - '5672:5672'
+    deploy:
+      mode: replicated
+      replicas: 1
+    volumes:
+      - ./db-data/rabbitmq/:/var/lib/rabbitmq/
+
+  redis:
+    image: 'redis:8.4-alpine'
+    ports:
+      - '6379:6379'
+    deploy:
+      mode: replicated
+      replicas: 1
+    volumes:
+      - ./db-data/redis/:/data
