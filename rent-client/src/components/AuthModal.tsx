@@ -1,39 +1,65 @@
 
-import React, { useState, useRef, useEffect} from 'react';
-import { useUserStore } from '../stores/useUserStore';
+import React, { useState, useRef, useEffect, useCallback} from 'react';
+import { useAuthStore } from '../stores/authStore';
 import { Modal, Button, Input } from './UI';
 import googleLoginIcon from '../assets/google_icon.svg';
 import { postToBroker } from "../api/broker";
+import axios from 'axios';
+import type { User } from '../types/types';
 
 type AuthStep = 'SIGN_IN' | 'SIGN_UP' | 'FORGOT_PASSWORD' | 'VERIFY_CODE' | 'NEW_PASSWORD';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLogin: (user: { first_name: string; last_name: string; email: string }) => void;
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }) => {
+export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
+  const BROKER_URL = import.meta.env.VITE_BROKER_URL;
   const [step, setStep] = useState<AuthStep>('SIGN_IN');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [first_name, setFirstName] = useState('');
   const [last_name, setLastName] = useState('');
   const [isSignUpFlow, setIsSignUpFlow] = useState(false);
+  const [, setCheckingLogin] = useState(true);
   const [error, setError] = useState("");
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const setUser = useUserStore(state => state.setUser);
-	const user = useUserStore(state => state.user);
+  const login = useAuthStore(state => state.login);
 
-  // Focus management for OTP
   useEffect(() => {
     if (step === 'VERIFY_CODE') {
-      // Small delay to ensure modal transition finished
       setTimeout(() => otpRefs.current[0]?.focus(), 150);
     }
   }, [step]);
 
+  // Update user login status when checking login
+  const fetchProfile = useCallback(async () => {
+    const payload = { action: "resource", resource: "profile" };
+    const data = await postToBroker(payload);
+
+    if (!data.error && data.data) {
+      login(data.data as User);
+    }
+    if (data.error) console.log(`Error fetching profile: ${data.message}`);
+    setCheckingLogin(false);
+  }, [login]);
+
+  // if there is refresh token when component mounts, check login status
+  useEffect(() => {
+    const checkLogin = async () => {
+      const hasToken = document.cookie.includes("refresh_token");
+      if (hasToken) {
+        await fetchProfile();
+      }
+      setCheckingLogin(false);
+    };
+
+    checkLogin();
+  }, [fetchProfile]);
+
+  // Handle verification code input changes
   const handleOtpChange = (value: string, index: number) => {
     if (!/^\d*$/.test(value)) return;
     
@@ -47,83 +73,122 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
     }
   };
 
+	// Handle backspace to move focus back
   const handleOtpKeyDown = (e: React.KeyboardEvent, index: number) => {
     if (e.key === 'Backspace' && !otp[index] && index > 0) {
       otpRefs.current[index - 1]?.focus();
     }
   };
 
-
+  // Handle form submission for different steps
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (step === 'SIGN_IN') {
-		console.log("User before", user);
-	  const payload = { action: "auth", auth: { email, password } };
-		const data = await postToBroker(payload);
-		if (data.error) {
-			setError(`${data.message}`);
-			console.error(`Auth error: ${data.message}`);
-		}else{
-			console.log("Login successful:", data.data);
-			onLogin(data.data);
-			setUser({
-					...data.data
-				});
 
-			console.log("User set in store:", useUserStore.getState().user); 
-			//getState只适合非ui组件调试使用
-			setError("");
-			onClose();
-		}
-		
+    if (step === 'SIGN_IN') {
+      setError("");
+      try {
+        const payload = { action: "auth", auth: { email, password } };
+        const data = await postToBroker(payload);
+
+        console.log("Login successful:", data.data);
+        login(data.data as User);
+        setError("");
+        onClose();
+
+			} catch (err: unknown) {
+				if (axios.isAxiosError(err)) {
+					setError(err.response?.data?.message || err.message);
+					console.error('Axios auth error:', err.response?.data || err.message);
+				} else if (err instanceof Error) {
+					setError(err.message);
+					console.error('Auth error:', err.message);
+				} else {
+					setError(String(err));
+					console.error('Unknown auth error:', err);
+				}
+			}
     } else if (step === 'SIGN_UP') {
-			const payload = {
-				action: "verify",
-					verify: {
-						email,
-					},
+			setError("");
+			try {
+				const payload = {
+					action: "verify",
+					verify: { email },
 				};
-			console.log("Signup payload:", payload);
-			const data = await postToBroker(payload);
-		if (data.error) {
-			console.error(`Sending code error: ${data.message}`);
-			setError(`${data.message}`);
-		} else{
-			// Now requires verification
-      		setIsSignUpFlow(true);
-      		setStep('VERIFY_CODE');
-		} 
+				console.log("Signup payload:", payload);
+				const data = await postToBroker(payload);
+				setIsSignUpFlow(true);
+				setStep("VERIFY_CODE");
+				setError("");
+				console.log(data.message);
+			} catch (err: unknown) {
+				if (axios.isAxiosError(err)) {
+					setError(err.response?.data?.message || err.message);
+					console.error("Axios verify error:", err.response?.data || err.message);
+				} else if (err instanceof Error) {
+					setError(err.message);
+					console.error("Verify error:", err.message);
+				} else {
+					setError(String(err));
+					console.error("Unknown verify error:", err);
+				}
+			}
     } else if (step === 'FORGOT_PASSWORD') {
-		console.log("Forgot password for:", email);
+			setError("");
+			console.log("Forgot password for:", email);	
       setIsSignUpFlow(false);
       setStep('VERIFY_CODE');
-    } else if (step === 'VERIFY_CODE') {
-		const payload = {
-		action: "register",
-		  register: {
-		  email,
-		  password,
-		  first_name,
-		  last_name,
-		},
-    	};
-		console.log("verify:", payload)
-		console.log(otp)
+    } else if (step === 'VERIFY_CODE') {	
+			setError("");
+			console.log(otp)
       if (isSignUpFlow) {
-        onLogin({
-          first_name: 'u1',
-          last_name: 'Voss',
-          email: email || 'julian@example.com'
-        });
-        onClose();
+				const payload = {
+				action: "register",
+					register: {
+					email,
+					password,
+					first_name,
+					last_name,
+					verification_code: otp.join(''),
+					},
+				};
+			console.log("verify:", payload)
+			setError("");
+        try {
+          const data = await postToBroker(payload);
+          console.log("Registration successful:", data.data);
+
+          login(data.data as User);
+          setError("");
+          onClose();
+          alert("Registration successful! You are now logged in.");
+				} catch (err: unknown) {
+					if (axios.isAxiosError(err)) {
+						// Axios error
+						const message = err.response?.data?.message || err.message;
+						setError(message);
+						console.error("Axios register error:", err.response?.data || err.message);
+					} else if (err instanceof Error) {
+						// JS Error
+						setError(err.message);
+						console.error("Register error:", err.message);
+					} else {
+						setError(String(err));
+						console.error("Unknown register error:", err);
+					}
+				}
       } else {
         setStep('NEW_PASSWORD');
       }
     } else if (step === 'NEW_PASSWORD') {
       setStep('SIGN_IN');
     }
+		setStep('SIGN_IN');
   };
+
+  function handleGoogleLogin() {
+    window.location.href = `${BROKER_URL}/oauth/google/login`;
+  }
+
 
   const renderTitle = () => {
     switch (step) {
@@ -164,7 +229,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
           )}
 
           {step === 'VERIFY_CODE' && (
-            <div className="space-y-8 py-4">
+            <div className="space-y-8 py-2">
               <div className="text-center space-y-2">
                 <p className="text-[12px] text-[#7e918b] uppercase tracking-[0.3em] leading-relaxed">
                   Verification code sent to
@@ -184,7 +249,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
                     value={digit}
                     onChange={(e) => handleOtpChange(e.target.value, idx)}
                     onKeyDown={(e) => handleOtpKeyDown(e, idx)}
-                    className="w-10 h-14 md:w-12 md:h-16 bg-transparent border border-[#4a586e]/20 text-center text-2xl font-bold focus:border-[#4a586e] focus:outline-none transition-all text-[#4a586e] rounded-none"
+                    className="w-10 h-14 md:w-11 md:h-16 bg-transparent border border-[#4a586e]/20 text-center text-2xl font-bold focus:border-[#4a586e] focus:outline-none transition-all text-[#4a586e] rounded-none"
                   />
                 ))}
               </div>
@@ -243,7 +308,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
 
             <button 
               type="button"
-              onClick={handleSubmit}
+              onClick={handleGoogleLogin}
               className="w-full flex items-center justify-center gap-4 border border-[#4a586e] p-4 hover:bg-[#4a586e] hover:text-[#f3e9d2] transition-colors text-[#4a586e]"
             >
               <img src={googleLoginIcon} alt="Google login icon" />

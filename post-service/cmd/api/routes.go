@@ -32,29 +32,20 @@ func (app *Config) routes() http.Handler {
 		// 允许哪些来源访问你的后端
 		// https://* 和 http://* 表示：允许所有 http / https 域名
 		AllowedOrigins: []string{"https://*", "http://*"},
-
-		// 允许哪些 HTTP 方法
-		// GET    : 获取数据
-		// POST   : 提交数据
-		// PUT    : 更新数据
-		// DELETE : 删除数据
-		// OPTIONS: 浏览器在跨域时自动发送的“预检请求”
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 
 		// 允许前端在请求中携带哪些 HTTP 头
 		AllowedHeaders: []string{
-			"Accept",        // 告诉服务器：客户端希望接收什么格式的数据（如 application/json）
-			"Authorization", // 用来携带认证信息（如 JWT Token）
-			"Content-Type",  // 告诉服务器：请求体的数据格式
-			"X-CSRF-TOKEN",  // 防止 CSRF 攻击的安全令牌
+			"Accept",
+			"Authorization",
+			"Content-Type",
+			"X-CSRF-TOKEN",
 		},
 
 		// 允许前端“读取”的响应头
 		// 默认情况下浏览器只能读到少量响应头
 		ExposedHeaders: []string{"Link"},
 
-		// 是否允许携带 Cookie / Authorization 等凭证
-		// 如果你使用 session 或需要登录状态，这个通常要 true
 		AllowCredentials: true,
 
 		// 预检请求（OPTIONS）的缓存时间（单位：秒）
@@ -64,19 +55,7 @@ func (app *Config) routes() http.Handler {
 
 	mux.Use(middleware.Heartbeat("/ping"))
 
-	mux.Post("/authenticate", app.Authenticate)
-
-	mux.HandleFunc("/authenticate/google", app.GoogleLoginHandler)
-
-	mux.HandleFunc("/oauth/google/callback", app.GoogleCallbackHandler)
-
-	//mux.Post("/refresh", app.Refresh)
-
-	mux.Post("/register", app.Register)
-
-	mux.Post("/verify-email", app.VerifyEmail)
-
-	mux.Get("/resource/profile", app.Profile)
+	mux.Post("/post", app.Post)
 
 	// 返回配置完成的路由器
 	// mux 实现了 http.Handler 接口

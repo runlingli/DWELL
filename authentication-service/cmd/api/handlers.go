@@ -188,6 +188,11 @@ func (app *Config) Register(w http.ResponseWriter, r *http.Request) {
 	payload := jsonResponse{
 		Error:   false,
 		Message: fmt.Sprintf("%s registered successfully!", user.Email),
+		Data: map[string]any{
+			"email":      user.Email,
+			"first_name": user.FirstName,
+			"last_name":  user.LastName,
+		},
 	}
 
 	app.writeJSON(w, http.StatusCreated, payload)
@@ -195,26 +200,40 @@ func (app *Config) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Config) VerifyEmail(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Verify email service begin\n")
 	var requestPayload struct {
 		Email string `json:"email"`
 	}
 
 	err := app.readJSON(w, r, &requestPayload)
 	if err != nil {
+		log.Printf("Error reading email information: %v\n", err)
 		app.errorJSON(w, errors.New("Error reading email information"), http.StatusBadRequest)
 		return
 	}
 
 	existingUser, err := app.Models.User.GetByEmail(requestPayload.Email)
 	if err == nil && existingUser != nil {
+		log.Printf("Email already exists: %s\n", requestPayload.Email)
 		app.errorJSON(w, errors.New("Email already exists"), http.StatusConflict)
 		return
 	} else if err != nil && err != sql.ErrNoRows {
+		log.Printf("Server error when checking existing email: %v\n", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
-
-	app.MailService.SendCode(requestPayload.Email, "DWELL Verification Code")
+	log.Printf("Sending verification code to email: %s\n", requestPayload.Email)
+	err = app.MailService.SendCode(requestPayload.Email, "DWELL Verification Code")
+	if err != nil {
+		log.Printf("Error sending verification code: %v\n", err)
+		app.errorJSON(w, err, http.StatusInternalServerError)
+		return
+	}
+	payload := jsonResponse{
+		Error:   false,
+		Message: fmt.Sprintf("%s sent successfully!", requestPayload.Email),
+	}
+	app.writeJSON(w, http.StatusCreated, payload)
 }
 
 func (app *Config) setAccessTokenCookie(

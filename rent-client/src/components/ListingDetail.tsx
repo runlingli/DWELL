@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Listing, User } from '../types';
+import type { Listing, User } from '../types/types';
+import { getUserDisplayName } from '../types/types';
 import { Button } from './UI';
 
 interface ListingDetailProps {
@@ -31,7 +32,7 @@ export const ListingDetail: React.FC<ListingDetailProps> = ({
     month: 'short', day: 'numeric', year: 'numeric' 
   });
 
-  const isAuthor = currentUser?.name === listing.author.name;
+  const isAuthor = currentUser ? getUserDisplayName(currentUser) === listing.author.name : false;
 
   const handleDeleteClick = () => {
     if (isConfirmingDelete) {
@@ -109,12 +110,12 @@ export const ListingDetail: React.FC<ListingDetailProps> = ({
         </div>
 
         {/* Content Area */}
-        <div className="flex-grow overflow-y-auto custom-scrollbar">
+        <div className="grow overflow-y-auto custom-scrollbar">
           <div className="grid grid-cols-1 lg:grid-cols-12 min-h-full">
             
             {/* Left Column: Visuals */}
             <div className="lg:col-span-6 xl:col-span-7 bg-[#4a586e]/5 flex items-center justify-center p-6 md:p-10 xl:p-16 border-b lg:border-b-0 lg:border-r border-[#4a586e]/10">
-              <div className="relative w-full aspect-[4/5] shadow-2xl overflow-hidden group">
+              <div className="relative w-full aspect-4/5 shadow-2xl overflow-hidden group">
                 <img 
                   src={listing.imageUrl} 
                   alt={listing.title} 

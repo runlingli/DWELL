@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 )
@@ -43,6 +44,7 @@ func (s *MailService) SendCode(to string, subject string) error {
 	}
 
 	if code != "" {
+		log.Printf("Too many requests for email: %s", to)
 		return errors.New("Too many requests. Please try again later.")
 	}
 
@@ -51,6 +53,7 @@ func (s *MailService) SendCode(to string, subject string) error {
 
 	verificationVode, err := utils.GenerateCode()
 	if err != nil {
+		log.Printf("Error generating verification code: %v", err)
 		return err
 	}
 
@@ -58,6 +61,7 @@ func (s *MailService) SendCode(to string, subject string) error {
 	defer cancelSave()
 	err = s.refreshStore.SavePair(ctxSave, key, verificationVode, 5*time.Minute)
 	if err != nil {
+		log.Printf("Error saving verification code to store: %v", err)
 		return err
 	}
 
@@ -68,6 +72,7 @@ func (s *MailService) SendCode(to string, subject string) error {
 
 	request, err := http.NewRequest("POST", logServiceURL, bytes.NewBuffer(jsonData))
 	if err != nil {
+		log.Printf("Error creating mail service request: %v", err)
 		return err
 	}
 
@@ -76,6 +81,7 @@ func (s *MailService) SendCode(to string, subject string) error {
 	client := &http.Client{Timeout: utils.MailTimeout}
 	resp, err := client.Do(request)
 	if err != nil {
+		log.Printf("Error calling mail service: %v", err)
 		return err
 	}
 
@@ -85,6 +91,7 @@ func (s *MailService) SendCode(to string, subject string) error {
 	if resp.StatusCode != http.StatusAccepted {
 		return errors.New("error calling mail service")
 	}
+	log.Printf("Verification code sent to email: %s", to)
 
 	return nil
 }

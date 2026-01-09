@@ -1,5 +1,7 @@
+// This component renders an interactive map using Leaflet to display rental listings in Davis, CA.
+
 import React, { useEffect, useRef } from 'react';
-import { Listing } from '../types';
+import type { Listing } from '../types/types';
 
 declare const L: any;
 
@@ -82,12 +84,12 @@ export const MapView: React.FC<MapViewProps> = ({ listings, onMarkerClick, cente
   }, [listings, center, onMarkerClick]);
 
   return (
-    <div className="w-full h-[300px] md:h-[450px] lg:h-[550px] relative overflow-hidden group">
+    <div className="w-full h-75 md:h-112.5 lg:h-137.5 relative overflow-hidden group">
       <div ref={containerRef} className="w-full h-full" />
-      <div className="absolute top-4 left-4 z-[500] bg-[#4a586e] text-[#f3e9d2] px-3 py-1 text-[8px] font-bold uppercase tracking-widest pointer-events-none">
-        DAVIS — SPATIAL CURATION
+      <div className="absolute top-4 left-4 z-500 bg-[#4a586e] text-[#f3e9d2] px-3 py-1 text-[8px] font-bold uppercase tracking-widest pointer-events-none">
+        DAVIS
       </div>
-      <div className="absolute bottom-4 right-4 z-[500] bg-[#f3e9d2]/80 px-2 py-1 text-[8px] font-bold uppercase tracking-widest text-[#4a586e] opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute bottom-4 right-4 z-500 bg-[#f3e9d2]/80 px-2 py-1 text-[8px] font-bold uppercase tracking-widest text-[#4a586e] opacity-0 group-hover:opacity-100 transition-opacity">
         Interactive Discovery
       </div>
     </div>

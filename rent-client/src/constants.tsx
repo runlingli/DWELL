@@ -1,4 +1,4 @@
-import { Listing } from './types';
+import type { Listing } from './types/types';
 
 const now = new Date();
 const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime();

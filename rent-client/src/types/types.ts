@@ -25,10 +25,16 @@ export interface Listing {
 }
 
 export interface User {
-  id: string;
-  name: string;
+  id?: string;
+  first_name: string;
+  last_name: string;
   email: string;
   avatar?: string;
+}
+
+// Helper to get display name from user
+export const getUserDisplayName = (user: User): string => {
+  return `${user.first_name} ${user.last_name}`.trim();
 }
 
 export interface AppState {

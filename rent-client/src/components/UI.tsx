@@ -1,3 +1,5 @@
+// This component provides reusable UI elements like Button, Input, Select, and Modal with consistent styling.
+
 import React, { useState, useRef, useEffect } from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -89,7 +91,7 @@ export const Select: React.FC<SelectProps> = ({ options, value, onChange, placeh
       </button>
 
       {isOpen && (
-        <div className="absolute z-[3000] w-full mt-0 bg-[#f3e9d2] border border-[#4a586e] shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute z-3000 w-full mt-0 bg-[#f3e9d2] border border-[#4a586e] shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="max-h-60 overflow-y-auto custom-scrollbar">
             {options.map((option) => (
               <button
@@ -120,7 +122,7 @@ interface ModalProps {
   onClose: () => void;
   children: React.ReactNode;
   title?: string;
-  size?: 'md' | 'lg' | 'xl' | '4xl' | '6xl';
+  size?: 'md' | 'lg' | 'xl' | '4xl' | '5xl' | '6xl';
 }
 
 export const Modal: React.FC<ModalProps> = ({ 
@@ -142,7 +144,7 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-2000 flex items-center justify-center p-4">
       <div 
         className="absolute inset-0 bg-[#4a586e]/60 backdrop-blur-none" 
         onClick={onClose} 
@@ -159,7 +161,7 @@ export const Modal: React.FC<ModalProps> = ({
         {title && (
           <h2 className="font-serif text-3xl md:text-5xl mb-8 md:mb-12 tracking-tighter text-[#4a586e] uppercase leading-none">{title}</h2>
         )}
-        <div className="flex-grow overflow-y-auto custom-scrollbar pr-2">
+        <div className="grow overflow-y-auto overflow-x-hidden custom-scrollbar">
           {children}
         </div>
       </div>

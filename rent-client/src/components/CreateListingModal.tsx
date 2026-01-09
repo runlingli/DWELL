@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Modal, Button, Input, Select } from './UI';
-import { Listing } from '../types';
+import type { Listing } from '../types/types';
 import { NEIGHBORHOODS } from '../constants';
 
 declare const L: any;
@@ -70,7 +70,7 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ isOpen, 
     }
   }, [initialData, isOpen]);
 
-  // Handle Location Picker Map
+
   useEffect(() => {
     if (isOpen && mapContainerRef.current) {
       setTimeout(() => {
@@ -135,7 +135,8 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ isOpen, 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
+	console.log(formData)
+	const data = {
       id: initialData?.id || Math.random().toString(36).substr(2, 9),
       title: formData.title,
       price: Number(formData.price),
@@ -152,7 +153,9 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({ isOpen, 
       availableTo: new Date(formData.availableTo).getTime(),
       createdAt: initialData?.createdAt || Date.now(),
       author: initialData?.author || { name: 'Current User' } 
-    });
+    }
+    onSave(data);
+	console.log(data)
     onClose();
   };
 
