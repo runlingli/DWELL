@@ -1,5 +1,6 @@
-services:
+version: '3.9'
 
+services:
   broker-service:
     build:
       context: ./../broker-service
@@ -7,27 +8,18 @@ services:
     restart: always
     ports:
       - "8080:80"
-    deploy:
-      mode: replicated
-      replicas: 1 
 
   listener-service:
     build:
       context: ./../listener-service
-      # 使用指定的 Dockerfile
       dockerfile: listener-service.dockerfile
-    deploy:
-      mode: replicated # 副本模式
-      replicas: 1 # 启动一个副本
+    restart: always
 
   mailer-service:
     build:
       context: ./../mail-service
       dockerfile: mail-service.dockerfile
-    restart: always # 容器异常退出或 Docker 重启时自动拉起
-    deploy:
-      mode: replicated # 副本模式
-      replicas: 1 # 启动一个副本
+    restart: always
     environment:
       MAIL_DOMAIN: ${MAIL_DOMAIN}
       MAIL_HOST: ${MAIL_HOST}
@@ -42,20 +34,15 @@ services:
     build:
       context: ./../logger-service
       dockerfile: logger-service.dockerfile
-    restart: always 
-    deploy:
-      mode: replicated
-      replicas: 1
+    restart: always
+
   authentication-service:
     build:
       context: ./../authentication-service
       dockerfile: authentication-service.dockerfile
     restart: always
     ports:
-      - "8081:80" 
-    deploy:
-      mode: replicated
-      replicas: 1
+      - "8081:80"
     environment:
       DSN: "host=postgres port=5432 user=postgres password=password dbname=users sslmode=disable timezone=UTC connect_timeout=5"
       REDIS_ADDR: redis:6379
@@ -70,43 +57,39 @@ services:
   postgres:
     image: 'postgres:14.0'
     ports:
-      - "5633:5432" 
+      - "5633:5432"
     restart: always
-    deploy:
-      mode: replicated
-      replicas: 1
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: users
     volumes:
-      - ./db-data/postgres/:/var/lib/postgresql/data/
+      - /opt/project/db-data/postgres:/var/lib/postgresql/data
+
   mongo:
-    image: 'mongo:4.2.16-bionic'
+    image: 'mongo:4.2-bionic'
     ports:
       - "27017:27017"
+    restart: always
     environment:
       MONGO_INITDB_DATABASE: logs
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: password
     volumes:
-      - ./db-data/mongo/:/data/db
+      - /opt/project/db-data/mongo:/data/db
+
   rabbitmq:
     image: 'rabbitmq:3.9-alpine'
     ports:
       - '5672:5672'
-    deploy:
-      mode: replicated
-      replicas: 1
+    restart: always
     volumes:
-      - ./db-data/rabbitmq/:/var/lib/rabbitmq/
+      - /opt/project/db-data/rabbitmq:/var/lib/rabbitmq/
 
   redis:
     image: 'redis:8.4-alpine'
     ports:
       - '6379:6379'
-    deploy:
-      mode: replicated
-      replicas: 1
+    restart: always
     volumes:
-      - ./db-data/redis/:/data
+      - /opt/project/db-data/redis:/data
