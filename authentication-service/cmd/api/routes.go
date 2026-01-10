@@ -64,18 +64,23 @@ func (app *Config) routes() http.Handler {
 
 	mux.Use(middleware.Heartbeat("/ping"))
 
+	// Authentication
 	mux.Post("/authenticate", app.Authenticate)
+	mux.Post("/logout", app.Logout)
 
+	// OAuth
 	mux.HandleFunc("/authenticate/google", app.GoogleLoginHandler)
-
 	mux.HandleFunc("/oauth/google/callback", app.GoogleCallbackHandler)
 
-	//mux.Post("/refresh", app.Refresh)
-
+	// Registration
 	mux.Post("/register", app.Register)
-
 	mux.Post("/verify-email", app.VerifyEmail)
 
+	// Password Reset
+	mux.Post("/forgot-password", app.ForgotPassword)
+	mux.Post("/reset-password", app.ResetPassword)
+
+	// Resources
 	mux.Get("/resource/profile", app.Profile)
 
 	// 返回配置完成的路由器

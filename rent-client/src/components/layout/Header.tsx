@@ -28,7 +28,7 @@ export const Header: React.FC = () => {
           onClick={resetToHome}
           className="font-serif text-3xl tracking-tighter text-[#4a586e] transition-opacity hover:opacity-60"
         >
-          DWELL.
+          TinyRent
         </button>
 
         {/* Nav */}

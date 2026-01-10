@@ -1,4 +1,3 @@
-// pages/discover/DiscoverPage.tsx
 import React, { useMemo } from 'react';
 import { useUIStore, type SortOption } from '../../stores/UIStore';
 import { useListingsStore } from '../../stores/listingStore';
@@ -53,7 +52,7 @@ export const DiscoverPage: React.FC = () => {
       <div className="mb-16">
         <div className="mb-5">
           <h1 className="font-serif text-6xl md:text-8xl mb-6 tracking-tighter text-[#4a586e] leading-none">
-            Davis Residences.
+            Short Period Residences
           </h1>
         </div>
 

@@ -45,7 +45,6 @@ export interface UIState {
 }
 
 export const useUIStore = create<UIState>((set) => ({
-  // ===== state =====
   view: 'discover',
   profileTab: 'favorites',
   sortBy: 'newest',

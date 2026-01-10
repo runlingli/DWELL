@@ -17,13 +17,15 @@ import (
 // RequestPayload 表示：
 // 前端发送给 broker 的完整 JSON 请求结构
 type RequestPayload struct {
-	Action   string            `json:"action"`
-	Register regPayload        `json:"register,omitempty"`
-	Auth     AuthPayload       `json:"auth,omitempty"`
-	Log      LogPayload        `json:"log,omitempty"`
-	Mail     MailPayload       `json:"mail,omitempty"`
-	Verify   VerifyCodePayload `json:"verify,omitempty"`
-	Resource string            `json:"resource,omitempty"`
+	Action         string               `json:"action"`
+	Register       regPayload           `json:"register,omitempty"`
+	Auth           AuthPayload          `json:"auth,omitempty"`
+	Log            LogPayload           `json:"log,omitempty"`
+	Mail           MailPayload          `json:"mail,omitempty"`
+	Verify         VerifyCodePayload    `json:"verify,omitempty"`
+	Resource       string               `json:"resource,omitempty"`
+	ForgotPassword ForgotPasswordPaylod `json:"forgot_password,omitempty"`
+	ResetPassword  ResetPasswordPayload `json:"reset_password,omitempty"`
 }
 
 type regPayload struct {
@@ -52,6 +54,16 @@ type MailPayload struct {
 	To      string `json:"to"`
 	Subject string `json:"subject"`
 	Message string `json:"message"`
+}
+
+type ForgotPasswordPaylod struct {
+	Email string `json:"email"`
+}
+
+type ResetPasswordPayload struct {
+	Email            string `json:"email"`
+	VerificationCode string `json:"verification_code"`
+	NewPassword      string `json:"new_password"`
 }
 
 // =======================
@@ -91,12 +103,16 @@ func (app *Config) HandleSubmission(w http.ResponseWriter, r *http.Request) {
 	switch requestPayload.Action {
 
 	case "register":
-		// 登录认证 → 转发给 authentication-service
+		// 注册 → 转发给 authentication-service
 		app.register(w, requestPayload.Register)
 
 	case "auth":
 		// 登录认证 → 转发给 authentication-service
 		app.authenticate(w, requestPayload.Auth)
+
+	case "logout":
+		// 登出 → 转发给 authentication-service
+		app.logout(w, r)
 
 	case "log":
 		app.logEventViaRabbit(w, requestPayload.Log)
@@ -110,6 +126,14 @@ func (app *Config) HandleSubmission(w http.ResponseWriter, r *http.Request) {
 
 	case "resource":
 		app.getResource(w, r, requestPayload.Resource)
+
+	case "forgot-password":
+		// 忘记密码 → 转发给 authentication-service
+		app.forgotPassword(w, requestPayload.ForgotPassword)
+
+	case "reset-password":
+		// 重置密码 → 转发给 authentication-service
+		app.resetPassword(w, requestPayload.ResetPassword)
 
 	default:
 		app.errorJSON(w, errors.New("unknown action"))
@@ -256,6 +280,21 @@ func (app *Config) forwardToAuthService(
 
 func (app *Config) logItem(w http.ResponseWriter, entry LogPayload) {
 
+}
+
+func (app *Config) forgotPassword(w http.ResponseWriter, p ForgotPasswordPaylod) {
+	log.Printf("Forwarding forgot password request for: %s", p.Email)
+	app.forwardToAuthService(w, nil, "POST", "http://authentication-service/forgot-password", p)
+}
+
+func (app *Config) resetPassword(w http.ResponseWriter, p ResetPasswordPayload) {
+	log.Printf("Forwarding reset password request for: %s", p.Email)
+	app.forwardToAuthService(w, nil, "POST", "http://authentication-service/reset-password", p)
+}
+
+func (app *Config) logout(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Forwarding logout request")
+	app.forwardToAuthService(w, r, "POST", "http://authentication-service/logout", nil)
 }
 
 func (app *Config) sendMail(w http.ResponseWriter, msg MailPayload) {
