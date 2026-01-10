@@ -1,4 +1,6 @@
+// src/stores/favouriteStore.ts
 import { create } from 'zustand';
+import { STORAGE_KEYS } from '@/config';
 
 type FavoritesState = {
   favorites: string[];
@@ -6,8 +8,6 @@ type FavoritesState = {
   isFavorite: (id: string) => boolean;
   hydrate: () => void;
 };
-
-const STORAGE_KEY = 'dwell_favorites';
 
 export const useFavoritesStore = create<FavoritesState>((set, get) => ({
   favorites: [],
@@ -18,14 +18,14 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
         ? state.favorites.filter((fid) => fid !== id)
         : [...state.favorites, id];
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      localStorage.setItem(STORAGE_KEYS.favorites, JSON.stringify(next));
       return { favorites: next };
     }),
 
   isFavorite: (id) => get().favorites.includes(id),
 
   hydrate: () => {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEYS.favorites);
     if (raw) {
       set({ favorites: JSON.parse(raw) });
     }

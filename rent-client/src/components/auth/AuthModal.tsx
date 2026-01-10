@@ -1,14 +1,12 @@
-// src/components/AuthModal.tsx
+// src/components/auth/AuthModal.tsx
 import React, { useEffect } from 'react';
-import { Modal } from './UI';
-import {
-  SignInForm,
-  SignUpForm,
-  ForgotPasswordForm,
-  VerifyCodeForm,
-  NewPasswordForm,
-  useAuthFlow,
-} from './auth';
+import { Modal } from '@/ui';
+import { useAuthFlow } from '@/hooks';
+import { SignInForm } from './SignInForm';
+import { SignUpForm } from './SignUpForm';
+import { ForgotPasswordForm } from './ForgotPasswordForm';
+import { VerifyCodeForm } from './VerifyCodeForm';
+import { NewPasswordForm } from './NewPasswordForm';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -43,12 +41,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     checkExistingSession,
   } = useAuthFlow(onClose);
 
-  // Check for existing session on mount
   useEffect(() => {
     checkExistingSession();
   }, [checkExistingSession]);
 
-  // Clear error when switching steps
   useEffect(() => {
     clearError();
   }, [step, clearError]);
@@ -69,7 +65,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title={TITLES[step]}>
       <div>
-        {/* Error Display */}
         {error && (
           <p className="text-[#f47979] text-[10px] uppercase tracking-widest mb-4 p-3 bg-[#f47979]/10 border border-[#f47979]/20">
             {error}

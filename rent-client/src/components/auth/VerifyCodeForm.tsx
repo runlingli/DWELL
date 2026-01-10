@@ -1,6 +1,6 @@
 // src/components/auth/VerifyCodeForm.tsx
 import React, { useRef, useEffect, useState } from 'react';
-import { Button } from '../UI';
+import { Button } from '../../UI';
 
 interface VerifyCodeFormProps {
   email: string;

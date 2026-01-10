@@ -2,12 +2,15 @@ package main
 
 import (
 	"broker/event"
-	"bytes"         // 用于把 JSON 数据转成 io.Reader（HTTP 请求体需要）
-	"encoding/json" // JSON 编码 / 解码
-	"errors"        // 创建错误对象
+	"bytes"
+	"encoding/json"
+	"errors"
 	"log"
-	"net/http" // HTTP 服务与客户端
+	"net/http"
+	"strconv"
 	"time"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // =======================
@@ -26,6 +29,8 @@ type RequestPayload struct {
 	Resource       string               `json:"resource,omitempty"`
 	ForgotPassword ForgotPasswordPaylod `json:"forgot_password,omitempty"`
 	ResetPassword  ResetPasswordPayload `json:"reset_password,omitempty"`
+	Post           PostPayload          `json:"post,omitempty"`
+	DeletePost     DeletePostPayload    `json:"delete_post,omitempty"`
 }
 
 type regPayload struct {
@@ -64,6 +69,32 @@ type ResetPasswordPayload struct {
 	Email            string `json:"email"`
 	VerificationCode string `json:"verification_code"`
 	NewPassword      string `json:"new_password"`
+}
+
+// Post-related payloads
+type PostPayload struct {
+	ID               int      `json:"id,omitempty"`
+	Title            string   `json:"title"`
+	Price            float64  `json:"price"`
+	Location         string   `json:"location,omitempty"`
+	Neighborhood     string   `json:"neighborhood"`
+	Lat              float64  `json:"lat"`
+	Lng              float64  `json:"lng"`
+	Radius           int      `json:"radius"`
+	Type             string   `json:"type"`
+	ImageURL         string   `json:"imageUrl"`
+	AdditionalImages []string `json:"additionalImages,omitempty"`
+	Description      string   `json:"description"`
+	Bedrooms         int      `json:"bedrooms"`
+	Bathrooms        int      `json:"bathrooms"`
+	AvailableFrom    int64    `json:"availableFrom"`
+	AvailableTo      int64    `json:"availableTo"`
+	AuthorID         int      `json:"authorId"`
+}
+
+type DeletePostPayload struct {
+	ID       int `json:"id"`
+	AuthorID int `json:"authorId"`
 }
 
 // =======================
@@ -134,6 +165,22 @@ func (app *Config) HandleSubmission(w http.ResponseWriter, r *http.Request) {
 	case "reset-password":
 		// 重置密码 → 转发给 authentication-service
 		app.resetPassword(w, requestPayload.ResetPassword)
+
+	case "get-posts":
+		// 获取所有帖子 → 转发给 post-service
+		app.getAllPosts(w)
+
+	case "create-post":
+		// 创建帖子 → 转发给 post-service
+		app.createPost(w, requestPayload.Post)
+
+	case "update-post":
+		// 更新帖子 → 转发给 post-service
+		app.updatePost(w, requestPayload.Post)
+
+	case "delete-post":
+		// 删除帖子 → 转发给 post-service
+		app.deletePost(w, requestPayload.DeletePost)
 
 	default:
 		app.errorJSON(w, errors.New("unknown action"))
@@ -297,6 +344,136 @@ func (app *Config) logout(w http.ResponseWriter, r *http.Request) {
 	app.forwardToAuthService(w, r, "POST", "http://authentication-service/logout", nil)
 }
 
+// Post service handlers
+func (app *Config) getAllPosts(w http.ResponseWriter) {
+	log.Printf("Forwarding get all posts request")
+	app.forwardToPostService(w, "GET", "http://post-service/posts", nil)
+}
+
+func (app *Config) createPost(w http.ResponseWriter, p PostPayload) {
+	log.Printf("Forwarding create post request")
+	app.forwardToPostService(w, "POST", "http://post-service/posts", p)
+}
+
+func (app *Config) updatePost(w http.ResponseWriter, p PostPayload) {
+	log.Printf("Forwarding update post request for ID: %d", p.ID)
+	url := "http://post-service/posts/" + strconv.Itoa(p.ID)
+	app.forwardToPostService(w, "PUT", url, p)
+}
+
+func (app *Config) deletePost(w http.ResponseWriter, p DeletePostPayload) {
+	log.Printf("Forwarding delete post request for ID: %d", p.ID)
+	url := "http://post-service/posts/" + strconv.Itoa(p.ID)
+	body := map[string]int{"authorId": p.AuthorID}
+	app.forwardToPostService(w, "DELETE", url, body)
+}
+
+
+// RESTful API handlers for posts
+func (app *Config) GetAllPostsREST(w http.ResponseWriter, r *http.Request) {
+	log.Printf("RESTful: GET all posts")
+	app.forwardToPostService(w, "GET", "http://post-service/posts", nil)
+}
+
+func (app *Config) GetPostByIDREST(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	log.Printf("RESTful: GET post by ID: %s", id)
+	url := "http://post-service/posts/" + id
+	app.forwardToPostService(w, "GET", url, nil)
+}
+
+func (app *Config) CreatePostREST(w http.ResponseWriter, r *http.Request) {
+	log.Println("========== Broker: CreatePostREST START ==========")
+	var post PostPayload
+	if err := app.readJSON(w, r, &post); err != nil {
+		log.Printf("ERROR reading post from request: %v", err)
+		app.errorJSON(w, err)
+		return
+	}
+	log.Printf("Received post - Title: %s, AuthorID: %d", post.Title, post.AuthorID)
+	if post.AuthorID == 0 {
+		log.Println("WARNING: AuthorID is 0!")
+	}
+	app.forwardToPostService(w, "POST", "http://post-service/posts", post)
+}
+
+func (app *Config) UpdatePostREST(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	var post PostPayload
+	if err := app.readJSON(w, r, &post); err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	log.Printf("RESTful: UPDATE post ID: %s", id)
+	url := "http://post-service/posts/" + id
+	app.forwardToPostService(w, "PUT", url, post)
+}
+
+func (app *Config) DeletePostREST(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	var body struct {
+		AuthorID int `json:"authorId"`
+	}
+	if err := app.readJSON(w, r, &body); err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	log.Printf("RESTful: DELETE post ID: %s", id)
+	url := "http://post-service/posts/" + id
+	app.forwardToPostService(w, "DELETE", url, body)
+}
+
+func (app *Config) forwardToPostService(w http.ResponseWriter, method, url string, body any) {
+	var reader *bytes.Reader
+	if body != nil {
+		jsonData, err := json.MarshalIndent(body, "", "\t")
+		if err != nil {
+			app.errorJSON(w, err)
+			return
+		}
+		log.Printf("Forwarding request to %s, body: %s", url, string(jsonData))
+		reader = bytes.NewReader(jsonData)
+	} else {
+		reader = bytes.NewReader(nil)
+	}
+
+	req, err := http.NewRequest(method, url, reader)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	var payload jsonResponse
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	if payload.Error {
+		log.Printf("Post service returned error: %s", payload.Message)
+		statusCode := resp.StatusCode
+		if statusCode == 0 {
+			statusCode = http.StatusInternalServerError
+		}
+		app.errorJSON(w, errors.New(payload.Message), statusCode)
+		return
+	}
+
+	app.writeJSON(w, resp.StatusCode, payload)
+}
+
 func (app *Config) sendMail(w http.ResponseWriter, msg MailPayload) {
 	jsonData, _ := json.MarshalIndent(msg, "", "\t")
 
@@ -384,4 +561,68 @@ func (app *Config) pushToQueue(name, msg string) error {
 	}
 
 	return nil
+}
+
+// =======================
+// RESTful Auth API Handlers
+// =======================
+
+func (app *Config) LoginREST(w http.ResponseWriter, r *http.Request) {
+	log.Println("RESTful: POST /auth/login")
+	var payload AuthPayload
+	if err := app.readJSON(w, r, &payload); err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	app.forwardToAuthService(w, nil, "POST", "http://authentication-service/auth/login", payload)
+}
+
+func (app *Config) LogoutREST(w http.ResponseWriter, r *http.Request) {
+	log.Println("RESTful: POST /auth/logout")
+	app.forwardToAuthService(w, r, "POST", "http://authentication-service/auth/logout", nil)
+}
+
+func (app *Config) RegisterREST(w http.ResponseWriter, r *http.Request) {
+	log.Println("RESTful: POST /auth/register")
+	var payload regPayload
+	if err := app.readJSON(w, r, &payload); err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	app.forwardToAuthService(w, nil, "POST", "http://authentication-service/auth/register", payload)
+}
+
+func (app *Config) VerifyEmailREST(w http.ResponseWriter, r *http.Request) {
+	log.Println("RESTful: POST /auth/verify-email")
+	var payload VerifyCodePayload
+	if err := app.readJSON(w, r, &payload); err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	app.forwardToAuthService(w, nil, "POST", "http://authentication-service/auth/verify-email", payload)
+}
+
+func (app *Config) ForgotPasswordREST(w http.ResponseWriter, r *http.Request) {
+	log.Println("RESTful: POST /auth/forgot-password")
+	var payload ForgotPasswordPaylod
+	if err := app.readJSON(w, r, &payload); err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	app.forwardToAuthService(w, nil, "POST", "http://authentication-service/auth/forgot-password", payload)
+}
+
+func (app *Config) ResetPasswordREST(w http.ResponseWriter, r *http.Request) {
+	log.Println("RESTful: POST /auth/reset-password")
+	var payload ResetPasswordPayload
+	if err := app.readJSON(w, r, &payload); err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	app.forwardToAuthService(w, nil, "POST", "http://authentication-service/auth/reset-password", payload)
+}
+
+func (app *Config) ProfileREST(w http.ResponseWriter, r *http.Request) {
+	log.Println("RESTful: GET /auth/profile")
+	app.forwardToAuthService(w, r, "GET", "http://authentication-service/auth/profile", nil)
 }

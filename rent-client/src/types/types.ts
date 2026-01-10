@@ -25,12 +25,18 @@ export interface Listing {
 }
 
 export interface User {
-  id?: string;
+  id?: number | string;
   first_name: string;
   last_name: string;
   email: string;
   avatar?: string;
 }
+
+// Helper to get user ID as number
+export const getUserId = (user: User | null): number | undefined => {
+  if (!user?.id) return undefined;
+  return typeof user.id === 'number' ? user.id : parseInt(user.id, 10);
+};
 
 // Helper to get display name from user
 export const getUserDisplayName = (user: User): string => {

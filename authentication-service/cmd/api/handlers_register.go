@@ -56,11 +56,12 @@ func (app *Config) Register(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Inserting user: %+v", user)
 
-	_, err = app.Models.User.Insert(user)
+	userID, err := app.Models.User.Insert(user)
 	if err != nil {
 		app.errorJSON(w, err, http.StatusBadRequest)
 		return
 	}
+	user.ID = userID
 
 	// Log the registration
 	go func() {
@@ -91,6 +92,7 @@ func (app *Config) Register(w http.ResponseWriter, r *http.Request) {
 		Error:   false,
 		Message: fmt.Sprintf("%s registered successfully!", user.Email),
 		Data: map[string]any{
+			"id":         user.ID,
 			"email":      user.Email,
 			"first_name": user.FirstName,
 			"last_name":  user.LastName,

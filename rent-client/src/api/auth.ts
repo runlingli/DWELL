@@ -40,29 +40,31 @@ const extractError = (err: unknown): ApiError => {
 };
 
 /**
- * Login with email and password
+ * Login with email and password (RESTful: POST /auth/login)
  */
 export async function login(email: string, password: string): Promise<AuthResponse> {
   try {
-    const res = await authClient.post<AuthResponse>('/handle', {
-      action: 'auth',
-      auth: { email, password },
+    console.log('Attempting login for:', email);
+    const res = await authClient.post<AuthResponse>('/auth/login', {
+      email,
+      password,
     });
+    console.log('Login response:', res.data);
     return res.data;
   } catch (err) {
     const error = extractError(err);
+    console.error('Login error:', error);
     throw new Error(error.message);
   }
 }
 
 /**
- * Send verification code to email (for signup)
+ * Send verification code to email (RESTful: POST /auth/verify-email)
  */
 export async function sendVerificationCode(email: string): Promise<AuthResponse> {
   try {
-    const res = await authClient.post<AuthResponse>('/handle', {
-      action: 'verify',
-      verify: { email },
+    const res = await authClient.post<AuthResponse>('/auth/verify-email', {
+      email,
     });
     return res.data;
   } catch (err) {
@@ -72,7 +74,7 @@ export async function sendVerificationCode(email: string): Promise<AuthResponse>
 }
 
 /**
- * Register a new user with verification code
+ * Register a new user with verification code (RESTful: POST /auth/register)
  */
 export async function register(
   email: string,
@@ -82,48 +84,46 @@ export async function register(
   verificationCode: string
 ): Promise<AuthResponse> {
   try {
-    const res = await authClient.post<AuthResponse>('/handle', {
-      action: 'register',
-      register: {
-        email,
-        password,
-        first_name: firstName,
-        last_name: lastName,
-        verification_code: verificationCode,
-      },
+    console.log('Attempting registration for:', email);
+    const res = await authClient.post<AuthResponse>('/auth/register', {
+      email,
+      password,
+      first_name: firstName,
+      last_name: lastName,
+      verification_code: verificationCode,
     });
+    console.log('Registration response:', res.data);
     return res.data;
   } catch (err) {
     const error = extractError(err);
+    console.error('Registration error:', error);
     throw new Error(error.message);
   }
 }
 
 /**
- * Fetch current user profile (uses cookies for auth)
+ * Fetch current user profile (RESTful: GET /auth/profile)
  */
 export async function fetchProfile(): Promise<AuthResponse> {
   try {
-    const res = await authClient.post<AuthResponse>('/handle', {
-      action: 'resource',
-      resource: 'profile',
-    });
+    console.log('Fetching user profile...');
+    const res = await authClient.get<AuthResponse>('/auth/profile');
+    console.log('Profile response:', res.data);
     return res.data;
   } catch (err) {
     const error = extractError(err);
+    console.error('Profile fetch error:', error);
     throw new Error(error.message);
   }
 }
 
 /**
- * Send password reset code to email
- * Note: Backend may not have this implemented yet
+ * Send password reset code to email (RESTful: POST /auth/forgot-password)
  */
 export async function sendPasswordResetCode(email: string): Promise<AuthResponse> {
   try {
-    const res = await authClient.post<AuthResponse>('/handle', {
-      action: 'forgot-password',
-      forgot_password: { email },
+    const res = await authClient.post<AuthResponse>('/auth/forgot-password', {
+      email,
     });
     return res.data;
   } catch (err) {
@@ -133,8 +133,7 @@ export async function sendPasswordResetCode(email: string): Promise<AuthResponse
 }
 
 /**
- * Reset password with verification code
- * Note: Backend may not have this implemented yet
+ * Reset password with verification code (RESTful: POST /auth/reset-password)
  */
 export async function resetPassword(
   email: string,
@@ -142,13 +141,10 @@ export async function resetPassword(
   newPassword: string
 ): Promise<AuthResponse> {
   try {
-    const res = await authClient.post<AuthResponse>('/handle', {
-      action: 'reset-password',
-      reset_password: {
-        email,
-        verification_code: verificationCode,
-        new_password: newPassword,
-      },
+    const res = await authClient.post<AuthResponse>('/auth/reset-password', {
+      email,
+      verification_code: verificationCode,
+      new_password: newPassword,
     });
     return res.data;
   } catch (err) {
@@ -170,6 +166,22 @@ export async function resendVerificationCode(email: string): Promise<AuthRespons
  */
 export function getGoogleLoginUrl(): string {
   return `${BROKER_URL}/oauth/google/login`;
+}
+
+/**
+ * Logout - calls backend to clear cookies (RESTful: POST /auth/logout)
+ */
+export async function logout(): Promise<AuthResponse> {
+  try {
+    console.log('Logging out...');
+    const res = await authClient.post<AuthResponse>('/auth/logout');
+    console.log('Logout response:', res.data);
+    return res.data;
+  } catch (err) {
+    const error = extractError(err);
+    console.error('Logout error:', error);
+    throw new Error(error.message);
+  }
 }
 
 /**

@@ -1,8 +1,7 @@
-// src/components/auth/useAuthFlow.ts
-import { useState, useCallback, useEffect } from 'react';
-import { useAuthStore } from '../../stores/authStore';
-import * as authApi from '../../api/auth';
-import type { User } from '../../types/types';
+// src/hooks/useAuthFlow.ts
+import { useState, useCallback } from 'react';
+import { useAuthStore } from '@/stores';
+import * as authApi from '@/api/auth';
 
 export type AuthStep = 'SIGN_IN' | 'SIGN_UP' | 'FORGOT_PASSWORD' | 'VERIFY_CODE' | 'NEW_PASSWORD';
 
@@ -16,29 +15,22 @@ export interface AuthFormData {
 }
 
 export interface UseAuthFlowReturn {
-  // State
   step: AuthStep;
   formData: AuthFormData;
   error: string;
   isLoading: boolean;
   isSignUpFlow: boolean;
-
-  // Actions
   setStep: (step: AuthStep) => void;
   setFormData: (data: Partial<AuthFormData>) => void;
   setError: (error: string) => void;
   clearError: () => void;
   reset: () => void;
-
-  // Auth operations
   handleSignIn: () => Promise<boolean>;
   handleSignUp: () => Promise<boolean>;
   handleForgotPassword: () => Promise<boolean>;
   handleVerifyCode: (code?: string) => Promise<boolean>;
   handleNewPassword: (password?: string, confirmPassword?: string) => Promise<boolean>;
   handleResendCode: () => Promise<boolean>;
-
-  // Hydration
   checkExistingSession: () => Promise<void>;
 }
 
@@ -74,7 +66,6 @@ export function useAuthFlow(onSuccess?: () => void): UseAuthFlowReturn {
     setIsSignUpFlow(false);
   }, []);
 
-  // Check for existing session on mount
   const checkExistingSession = useCallback(async () => {
     if (!authApi.hasRefreshToken()) return;
 
@@ -88,7 +79,6 @@ export function useAuthFlow(onSuccess?: () => void): UseAuthFlowReturn {
     }
   }, [login]);
 
-  // Sign In
   const handleSignIn = useCallback(async (): Promise<boolean> => {
     setError('');
     setIsLoading(true);
@@ -109,7 +99,6 @@ export function useAuthFlow(onSuccess?: () => void): UseAuthFlowReturn {
     }
   }, [formData.email, formData.password, login, onSuccess]);
 
-  // Sign Up - Step 1: Send verification code
   const handleSignUp = useCallback(async (): Promise<boolean> => {
     setError('');
     setIsLoading(true);
@@ -127,7 +116,6 @@ export function useAuthFlow(onSuccess?: () => void): UseAuthFlowReturn {
     }
   }, [formData.email]);
 
-  // Forgot Password - Send reset code
   const handleForgotPassword = useCallback(async (): Promise<boolean> => {
     setError('');
     setIsLoading(true);
@@ -138,8 +126,6 @@ export function useAuthFlow(onSuccess?: () => void): UseAuthFlowReturn {
       setStep('VERIFY_CODE');
       return true;
     } catch (err) {
-      // If backend doesn't support this yet, still proceed to verify step
-      // This allows testing the UI flow
       console.warn('Password reset may not be implemented on backend:', err);
       setIsSignUpFlow(false);
       setStep('VERIFY_CODE');
@@ -149,84 +135,88 @@ export function useAuthFlow(onSuccess?: () => void): UseAuthFlowReturn {
     }
   }, [formData.email]);
 
-  // Verify Code - accepts code directly to avoid state timing issues
-  const handleVerifyCode = useCallback(async (code?: string): Promise<boolean> => {
-    setError('');
-    setIsLoading(true);
+  const handleVerifyCode = useCallback(
+    async (code?: string): Promise<boolean> => {
+      setError('');
+      setIsLoading(true);
 
-    const verificationCode = code || formData.verificationCode;
+      const verificationCode = code || formData.verificationCode;
 
-    try {
-      if (isSignUpFlow) {
-        // Complete registration
-        const response = await authApi.register(
-          formData.email,
-          formData.password,
-          formData.firstName,
-          formData.lastName,
-          verificationCode
-        );
+      try {
+        if (isSignUpFlow) {
+          const response = await authApi.register(
+            formData.email,
+            formData.password,
+            formData.firstName,
+            formData.lastName,
+            verificationCode
+          );
 
-        if (response.data) {
-          login(response.data);
-          onSuccess?.();
+          if (response.data) {
+            login(response.data);
+            onSuccess?.();
+            return true;
+          }
+          return false;
+        } else {
+          setFormDataState((prev) => ({ ...prev, verificationCode }));
+          setStep('NEW_PASSWORD');
           return true;
         }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Verification failed');
         return false;
-      } else {
-        // Password reset flow - store code and proceed to new password step
-        setFormDataState((prev) => ({ ...prev, verificationCode }));
-        setStep('NEW_PASSWORD');
-        return true;
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Verification failed');
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isSignUpFlow, formData.email, formData.password, formData.firstName, formData.lastName, formData.verificationCode, login, onSuccess]);
+    },
+    [
+      isSignUpFlow,
+      formData.email,
+      formData.password,
+      formData.firstName,
+      formData.lastName,
+      formData.verificationCode,
+      login,
+      onSuccess,
+    ]
+  );
 
-  // Set New Password - accepts passwords directly to avoid state timing issues
-  const handleNewPassword = useCallback(async (newPassword?: string, confirmPass?: string): Promise<boolean> => {
-    setError('');
+  const handleNewPassword = useCallback(
+    async (newPassword?: string, confirmPass?: string): Promise<boolean> => {
+      setError('');
 
-    const password = newPassword || formData.password;
-    const confirmPassword = confirmPass || formData.confirmPassword;
+      const password = newPassword || formData.password;
+      const confirmPassword = confirmPass || formData.confirmPassword;
 
-    // Validate passwords match
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return false;
-    }
+      if (password !== confirmPassword) {
+        setError('Passwords do not match');
+        return false;
+      }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return false;
-    }
+      if (password.length < 6) {
+        setError('Password must be at least 6 characters');
+        return false;
+      }
 
-    setIsLoading(true);
+      setIsLoading(true);
 
-    try {
-      await authApi.resetPassword(
-        formData.email,
-        formData.verificationCode,
-        password
-      );
-      setStep('SIGN_IN');
-      setFormDataState((prev) => ({ ...prev, password: '', confirmPassword: '' }));
-      return true;
-    } catch (err) {
-      // If backend doesn't support this yet, just go to sign in
-      console.warn('Password reset may not be implemented on backend:', err);
-      setStep('SIGN_IN');
-      return true;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [formData.email, formData.verificationCode, formData.password, formData.confirmPassword]);
+      try {
+        await authApi.resetPassword(formData.email, formData.verificationCode, password);
+        setStep('SIGN_IN');
+        setFormDataState((prev) => ({ ...prev, password: '', confirmPassword: '' }));
+        return true;
+      } catch (err) {
+        console.warn('Password reset may not be implemented on backend:', err);
+        setStep('SIGN_IN');
+        return true;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [formData.email, formData.verificationCode, formData.password, formData.confirmPassword]
+  );
 
-  // Resend verification code
   const handleResendCode = useCallback(async (): Promise<boolean> => {
     setError('');
     setIsLoading(true);

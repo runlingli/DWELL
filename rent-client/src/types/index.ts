@@ -1,1 +1,7 @@
-export * from './types';
+// src/types/index.ts
+// TypeScript types barrel export
+
+export type { Listing, User, AppState } from './types';
+
+// Re-export user helpers for backward compatibility (prefer @utils/user)
+export { getUserId, getUserDisplayName } from './types';

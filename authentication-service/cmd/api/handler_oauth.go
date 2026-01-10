@@ -28,35 +28,27 @@ func (app *Config) GoogleLoginHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-// GoogleCallbackHandler 处理 Google 授权回调
 func (app *Config) GoogleCallbackHandler(w http.ResponseWriter, r *http.Request) {
-	// 1. 获取 URL 参数
 	state := r.FormValue("state")
 	code := r.FormValue("code")
 
-	// 2. 验证 state，防止 CSRF
-	// TODO: 如果用 Redis 存储 state，可以在这里验证
 	validState, err := app.OAuthService.ValidateGoogleState(state)
 	if err != nil || !validState {
 		http.Error(w, "Invalid state", http.StatusBadRequest)
 		return
 	}
 
-	// 3. 用 code 换取 Google Token
 	userInfo, err := app.OAuthService.GetUserInfo(code)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to get user from google: %s", err), http.StatusInternalServerError)
 		return
 	}
 
-	// 5. 根据 Google 用户信息查找或创建用户
 	var userID int
 	user, err := app.Models.User.GetByGoogleID(userInfo.ID)
 	if err != nil {
-		// 如果用户不存在，就创建
 		log.Printf("User with Google ID %s not found, creating new user", userInfo.ID)
 		if user, err = app.Models.User.GetByEmail(userInfo.Email); err == nil && user != nil {
-			// 更新现有用户的 GoogleID
 			log.Printf("Existing user with email %s found, updating Google ID", userInfo.Email)
 			user.GoogleID = userInfo.ID
 			user.Update()
@@ -98,6 +90,5 @@ func (app *Config) GoogleCallbackHandler(w http.ResponseWriter, r *http.Request)
 
 	redirectURL := os.Getenv("REDIRECT_URL")
 
-	// 7. 返回给前端（也可以做跳转，把 token 放到 cookie 或 URL）
 	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 }

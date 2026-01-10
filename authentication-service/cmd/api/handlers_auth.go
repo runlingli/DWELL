@@ -8,7 +8,6 @@ import (
 	"time"
 )
 
-// Authenticate handles user login authentication
 func (app *Config) Authenticate(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Start authentication")
 	var requestPayload struct {
@@ -22,15 +21,12 @@ func (app *Config) Authenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify user exists
 	user, err := app.Models.User.GetByEmail(requestPayload.Email)
 	if err != nil {
 		log.Printf("User not found by email: %v", err)
 		app.errorJSON(w, errors.New("invalid credentials"), http.StatusUnauthorized)
 		return
 	}
-
-	// Validate password
 	valid, err := user.PasswordMatches(requestPayload.Password)
 	if err != nil || !valid {
 		log.Printf("Invalid password attempt for user %s: %v", requestPayload.Email, err)
@@ -38,7 +34,6 @@ func (app *Config) Authenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Log the authentication
 	go func() {
 		err := app.logRequest("authentication", fmt.Sprintf("%s logged in", user.Email))
 		if err != nil {
@@ -46,7 +41,6 @@ func (app *Config) Authenticate(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	// Generate token pair
 	atExp := time.Now().Add(accessTokenTime)
 	rtExp := time.Now().Add(refreshTokenTime)
 
@@ -67,6 +61,7 @@ func (app *Config) Authenticate(w http.ResponseWriter, r *http.Request) {
 		Error:   false,
 		Message: fmt.Sprintf("Logged in user %s", user.Email),
 		Data: userData{
+			ID:        user.ID,
 			FirstName: user.FirstName,
 			LastName:  user.LastName,
 			Email:     user.Email,

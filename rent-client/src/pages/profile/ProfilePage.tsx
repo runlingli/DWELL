@@ -1,11 +1,8 @@
-// pages/profile/ProfilePage.tsx
+// src/pages/profile/ProfilePage.tsx
 import React from 'react';
-import { useAuthStore } from '../../stores/authStore';
-import { useUIStore } from '../../stores/UIStore';
-import { useFavoritesStore } from '../../stores/favouriteStore';
-import { useListingsStore } from '../../stores/listingStore';
-import { ListingCard } from '../../components/ListingCard';
-import { getUserDisplayName } from '../../types/types';
+import { useAuthStore, useUIStore, useFavoritesStore, useListingsStore } from '@/stores';
+import { ListingCard } from '@/components';
+import { getUserDisplayName } from '@/utils';
 
 export const ProfilePage: React.FC = () => {
   const currentUser = useAuthStore((state) => state.currentUser);
@@ -35,12 +32,8 @@ export const ProfilePage: React.FC = () => {
             {currentUser.first_name.charAt(0).toUpperCase()}
           </div>
           <div>
-            <h1 className="font-serif text-5xl text-[#4a586e] tracking-tighter mb-1">
-              {displayName}
-            </h1>
-            <p className="text-[#7e918b] text-xs tracking-[0.3em] font-bold">
-              {currentUser.email}
-            </p>
+            <h1 className="font-serif text-5xl text-[#4a586e] tracking-tighter mb-1">{displayName}</h1>
+            <p className="text-[#7e918b] text-xs tracking-[0.3em] font-bold">{currentUser.email}</p>
           </div>
 
           <button

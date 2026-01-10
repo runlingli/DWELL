@@ -1,6 +1,6 @@
 // src/components/auth/SignInForm.tsx
 import React from 'react';
-import { Input, Button } from '../UI';
+import { Input, Button } from '../../UI';
 import { getGoogleLoginUrl } from '../../api/auth';
 import googleLoginIcon from '../../assets/google_icon.svg';
 

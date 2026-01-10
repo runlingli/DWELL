@@ -1,301 +1,293 @@
 package data
 
 import (
-	"context"    
-	"database/sql" 
-	"errors"      
-	"log"    
-	"time"    
-	"golang.org/x/crypto/bcrypt"
+	"context"
+	"database/sql"
+	"log"
+	"time"
 
-const dbTimeout = time.Second * 3 
+	"github.com/lib/pq"
+)
+
+const dbTimeout = time.Second * 3
+
 var db *sql.DB
 
-
 func New(dbPool *sql.DB) Models {
-	db = dbPool 
+	db = dbPool
 	return Models{
-		User: User{}, 
+		Post: Post{},
 	}
 }
 
 type Models struct {
-	Listing Listing
+	Post Post
 }
 
-type Listing struct {
-	ID               int       `json:"id" db:"id"`                     
-	Title            string    `json:"title" db:"title"`               
-	Price            float64   `json:"price" db:"price"`                
-	Location         string    `json:"location" db:"location"`
-	Neighborhood     string    `json:"neighborhood" db:"neighborhood"` 
-	Coordinates      GeoPoint  `json:"coordinates" db:"coordinates"`   
-	Radius           int       `json:"radius" db:"radius"`              
-	Type             string    `json:"type" db:"type"`                 
-	ImageURL         string    `json:"imageUrl" db:"image_url"`           
-	AdditionalImages []string  `json:"additionalImages" db:"additional_images"`
-	Description      string    `json:"description" db:"description"`     
-	Bedrooms         int       `json:"bedrooms" db:"bedrooms"`          
-	Bathrooms        int       `json:"bathrooms" db:"bathrooms"`       
-	CreatedAt        time.Time `json:"createdAt" db:"created_at"`       
-	AvailableFrom    time.Time `json:"availableFrom" db:"available_from"`
-	AvailableTo      time.Time `json:"availableTo" db:"available_to"`   
-	AuthorID         int       `json:"authorId" db:"author_id"` 
+// Post represents a rental listing
+type Post struct {
+	ID               int       `json:"id"`
+	Title            string    `json:"title"`
+	Price            float64   `json:"price"`
+	Location         string    `json:"location,omitempty"`
+	Neighborhood     string    `json:"neighborhood"`
+	Lat              float64   `json:"lat"`
+	Lng              float64   `json:"lng"`
+	Radius           int       `json:"radius"`
+	Type             string    `json:"type"`
+	ImageURL         string    `json:"imageUrl"`
+	AdditionalImages []string  `json:"additionalImages,omitempty"`
+	Description      string    `json:"description"`
+	Bedrooms         int       `json:"bedrooms"`
+	Bathrooms        int       `json:"bathrooms"`
+	AvailableFrom    time.Time `json:"availableFrom"`
+	AvailableTo      time.Time `json:"availableTo"`
+	AuthorID         int       `json:"authorId"`
+	CreatedAt        time.Time `json:"createdAt"`
+	UpdatedAt        time.Time `json:"updatedAt"`
 }
 
-// 坐标结构
-type GeoPoint struct {
-	Lat float64 `json:"lat" db:"lat"`
-	Lng float64 `json:"lng" db:"lng"`
+// PostWithAuthor includes author information for API responses
+type PostWithAuthor struct {
+	Post
+	Author Author `json:"author"`
 }
 
-
-// 作者信息
+// Author represents the post author's public info
 type Author struct {
-	Name   string `json:"name" db:"name"`
-	Avatar string `json:"avatar" db:"avatar"`
+	Name   string `json:"name"`
+	Avatar string `json:"avatar,omitempty"`
 }
 
-
-// GetAll 返回所有用户，按 LastName 排序
-func (u *User) GetAll() ([]*User, error) {
-	// 创建一个上下文 ctx，用于控制数据库操作超时
-	// context.WithTimeout 会返回 ctx 和 cancel 函数
-	// ctx 会在 3 秒后自动取消数据库查询
+// GetAll returns all posts with author info, ordered by creation date
+func (p *Post) GetAll() ([]*PostWithAuthor, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
-	defer cancel() // 函数结束时释放资源，防止泄漏
+	defer cancel()
 
-	query := `select id, coalesce(google_id, ''), email, first_name, last_name, password, user_active, created_at, updated_at
-	from users order by last_name`
+	query := `
+		SELECT
+			p.id, p.title, p.price, COALESCE(p.location, ''), p.neighborhood,
+			p.lat, p.lng, p.radius, p.type, COALESCE(p.image_url, ''),
+			COALESCE(p.additional_images, '{}'), COALESCE(p.description, ''),
+			p.bedrooms, p.bathrooms, p.available_from, p.available_to,
+			p.author_id, p.created_at, p.updated_at,
+			u.first_name, u.last_name
+		FROM posts p
+		JOIN users u ON p.author_id = u.id
+		ORDER BY p.created_at DESC
+	`
 
-	// QueryContext 用 ctx 执行 SQL 查询
-	// 返回多个结果 rows
 	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close() // 使用完 rows 后关闭
+	defer rows.Close()
 
-	var users []*User
+	var posts []*PostWithAuthor
 
-	// 循环读取每一行结果
 	for rows.Next() {
-		var user User
-		// Scan 将每列值赋给 user 对应字段
+		var post PostWithAuthor
+		var firstName, lastName string
+
 		err := rows.Scan(
-			&user.ID,
-			&user.GoogleID,
-			&user.Email,
-			&user.FirstName,
-			&user.LastName,
-			&user.Password,
-			&user.Active,
-			&user.CreatedAt,
-			&user.UpdatedAt,
+			&post.ID,
+			&post.Title,
+			&post.Price,
+			&post.Location,
+			&post.Neighborhood,
+			&post.Lat,
+			&post.Lng,
+			&post.Radius,
+			&post.Type,
+			&post.ImageURL,
+			pq.Array(&post.AdditionalImages),
+			&post.Description,
+			&post.Bedrooms,
+			&post.Bathrooms,
+			&post.AvailableFrom,
+			&post.AvailableTo,
+			&post.AuthorID,
+			&post.CreatedAt,
+			&post.UpdatedAt,
+			&firstName,
+			&lastName,
 		)
 		if err != nil {
-			log.Println("Error scanning", err)
+			log.Println("Error scanning post:", err)
 			return nil, err
 		}
 
-		users = append(users, &user) // 添加到结果切片
-	}
-
-	return users, nil
-}
-
-func (u *User) GetByEmail(email string) (*User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
-	defer cancel()
-
-	query := `select id, coalesce(google_id, ''), email, first_name, last_name, password, user_active, created_at, updated_at from users where email = $1`
-
-	var user User
-	// QueryRowContext 返回单行数据
-	row := db.QueryRowContext(ctx, query, email)
-
-	err := row.Scan(
-		&user.ID,
-		&user.GoogleID,
-		&user.Email,
-		&user.FirstName,
-		&user.LastName,
-		&user.Password,
-		&user.Active,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &user, nil
-}
-
-// =====================
-// 根据 ID 获取用户
-// =====================
-func (u *User) GetOne(id int) (*User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
-	defer cancel()
-
-	query := `select id, coalesce(google_id, ''), email, first_name, last_name, password, user_active, created_at, updated_at from users where id = $1`
-
-	var user User
-	row := db.QueryRowContext(ctx, query, id)
-
-	err := row.Scan(
-		&user.ID,
-		&user.GoogleID,
-		&user.Email,
-		&user.FirstName,
-		&user.LastName,
-		&user.Password,
-		&user.Active,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &user, nil
-}
-
-func (u *User) GetByGoogleID(googleID string) (*User, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
-	defer cancel()
-
-	query := `select id, google_id, email, first_name, last_name, coalesce(password, ''), user_active, created_at, updated_at from users where google_id = $1`
-	var user User
-	row := db.QueryRowContext(ctx, query, googleID)
-
-	err := row.Scan(
-		&user.ID,
-		&user.GoogleID,
-		&user.Email,
-		&user.FirstName,
-		&user.LastName,
-		&user.Password,
-		&user.Active,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-
-	if err != nil {
-		log.Printf("Error getting user by Google ID %s: %v", googleID, err)
-		return nil, err
-	}
-
-	return &user, nil
-}
-
-// =====================
-// 更新用户
-// =====================
-func (u *User) Update() error {
-	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
-	defer cancel()
-
-	stmt := `update users set
-		email = $1,
-		google_id = $2,
-		first_name = $3,
-		last_name = $4,
-		user_active = $5,
-		updated_at = $6
-		where id = $7`
-
-	_, err := db.ExecContext(ctx, stmt,
-		u.Email,
-		u.GoogleID,
-		u.FirstName,
-		u.LastName,
-		u.Active,
-		time.Now(),
-		u.ID,
-	)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// =====================
-// 删除用户
-// =====================
-func (u *User) Delete() error {
-	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
-	defer cancel()
-
-	stmt := `delete from users where id = $1`
-
-	_, err := db.ExecContext(ctx, stmt, u.ID)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (u *User) DeleteByID(id int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
-	defer cancel()
-
-	stmt := `delete from users where id = $1`
-
-	_, err := db.ExecContext(ctx, stmt, id)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// =====================
-// 插入新用户
-// =====================
-func (u *User) Insert(user User) (int, error) {
-	//context.Background()返回一个 空的根 context，没有取消信号和超时。
-	//context.WithTimeout(parent, timeout)基于 parent 创建一个新的 context，带有 超时功能。
-	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
-	defer cancel()
-
-	// bcrypt 加密用户密码，不可逆的加密。常用12-14，数字越大加密时间越长，越复杂
-	var hashedPassword []byte
-	var err error
-
-	if user.Password != "" {
-		// 仅当密码不为空时才加密
-		hashedPassword, err = bcrypt.GenerateFromPassword([]byte(user.Password), 12)
-		if err != nil {
-			return 0, err
+		post.Author = Author{
+			Name: firstName + " " + lastName,
 		}
-	} else {
-		hashedPassword = []byte("") // 或者 []byte("")，数据库字段允许 NULL
+
+		posts = append(posts, &post)
 	}
+
+	return posts, nil
+}
+
+// GetByID returns a single post by ID with author info
+func (p *Post) GetByID(id int) (*PostWithAuthor, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+	defer cancel()
+
+	query := `
+		SELECT
+			p.id, p.title, p.price, COALESCE(p.location, ''), p.neighborhood,
+			p.lat, p.lng, p.radius, p.type, COALESCE(p.image_url, ''),
+			COALESCE(p.additional_images, '{}'), COALESCE(p.description, ''),
+			p.bedrooms, p.bathrooms, p.available_from, p.available_to,
+			p.author_id, p.created_at, p.updated_at,
+			u.first_name, u.last_name
+		FROM posts p
+		JOIN users u ON p.author_id = u.id
+		WHERE p.id = $1
+	`
+
+	var post PostWithAuthor
+	var firstName, lastName string
+
+	row := db.QueryRowContext(ctx, query, id)
+	err := row.Scan(
+		&post.ID,
+		&post.Title,
+		&post.Price,
+		&post.Location,
+		&post.Neighborhood,
+		&post.Lat,
+		&post.Lng,
+		&post.Radius,
+		&post.Type,
+		&post.ImageURL,
+		pq.Array(&post.AdditionalImages),
+		&post.Description,
+		&post.Bedrooms,
+		&post.Bathrooms,
+		&post.AvailableFrom,
+		&post.AvailableTo,
+		&post.AuthorID,
+		&post.CreatedAt,
+		&post.UpdatedAt,
+		&firstName,
+		&lastName,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	post.Author = Author{
+		Name: firstName + " " + lastName,
+	}
+
+	return &post, nil
+}
+
+// GetByAuthorID returns all posts by a specific author
+func (p *Post) GetByAuthorID(authorID int) ([]*PostWithAuthor, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+	defer cancel()
+
+	query := `
+		SELECT
+			p.id, p.title, p.price, COALESCE(p.location, ''), p.neighborhood,
+			p.lat, p.lng, p.radius, p.type, COALESCE(p.image_url, ''),
+			COALESCE(p.additional_images, '{}'), COALESCE(p.description, ''),
+			p.bedrooms, p.bathrooms, p.available_from, p.available_to,
+			p.author_id, p.created_at, p.updated_at,
+			u.first_name, u.last_name
+		FROM posts p
+		JOIN users u ON p.author_id = u.id
+		WHERE p.author_id = $1
+		ORDER BY p.created_at DESC
+	`
+
+	rows, err := db.QueryContext(ctx, query, authorID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var posts []*PostWithAuthor
+
+	for rows.Next() {
+		var post PostWithAuthor
+		var firstName, lastName string
+
+		err := rows.Scan(
+			&post.ID,
+			&post.Title,
+			&post.Price,
+			&post.Location,
+			&post.Neighborhood,
+			&post.Lat,
+			&post.Lng,
+			&post.Radius,
+			&post.Type,
+			&post.ImageURL,
+			pq.Array(&post.AdditionalImages),
+			&post.Description,
+			&post.Bedrooms,
+			&post.Bathrooms,
+			&post.AvailableFrom,
+			&post.AvailableTo,
+			&post.AuthorID,
+			&post.CreatedAt,
+			&post.UpdatedAt,
+			&firstName,
+			&lastName,
+		)
+		if err != nil {
+			log.Println("Error scanning post:", err)
+			return nil, err
+		}
+
+		post.Author = Author{
+			Name: firstName + " " + lastName,
+		}
+
+		posts = append(posts, &post)
+	}
+
+	return posts, nil
+}
+
+// Insert creates a new post and returns its ID
+func (p *Post) Insert(post Post) (int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+	defer cancel()
+
+	stmt := `
+		INSERT INTO posts (
+			title, price, location, neighborhood, lat, lng, radius, type,
+			image_url, additional_images, description, bedrooms, bathrooms,
+			available_from, available_to, author_id, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+		RETURNING id
+	`
 
 	var newID int
-	stmt := `insert into users (email, google_id, first_name, last_name, password, user_active, created_at, updated_at)
-		values ($1, $2, $3, $4, $5, $6, $7, $8) returning id`
-
-	// 返回新插入行的 ID
-	//queryrowcontext以具体的值替换占位符$1...
-	err = db.QueryRowContext(ctx, stmt,
-		user.Email,
-		user.GoogleID,
-		user.FirstName,
-		user.LastName,
-		hashedPassword,
-		user.Active,
+	err := db.QueryRowContext(ctx, stmt,
+		post.Title,
+		post.Price,
+		post.Location,
+		post.Neighborhood,
+		post.Lat,
+		post.Lng,
+		post.Radius,
+		post.Type,
+		post.ImageURL,
+		pq.Array(post.AdditionalImages),
+		post.Description,
+		post.Bedrooms,
+		post.Bathrooms,
+		post.AvailableFrom,
+		post.AvailableTo,
+		post.AuthorID,
 		time.Now(),
 		time.Now(),
 	).Scan(&newID)
-	//Scan将returning id结果储存到newID
 
 	if err != nil {
 		return 0, err
@@ -304,43 +296,81 @@ func (u *User) Insert(user User) (int, error) {
 	return newID, nil
 }
 
-// =====================
-// 重置密码
-// =====================
-func (u *User) ResetPassword(password string) error {
+// Update updates an existing post
+func (p *Post) Update(post Post) error {
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	stmt := `
+		UPDATE posts SET
+			title = $1,
+			price = $2,
+			location = $3,
+			neighborhood = $4,
+			lat = $5,
+			lng = $6,
+			radius = $7,
+			type = $8,
+			image_url = $9,
+			additional_images = $10,
+			description = $11,
+			bedrooms = $12,
+			bathrooms = $13,
+			available_from = $14,
+			available_to = $15,
+			updated_at = $16
+		WHERE id = $17 AND author_id = $18
+	`
+
+	result, err := db.ExecContext(ctx, stmt,
+		post.Title,
+		post.Price,
+		post.Location,
+		post.Neighborhood,
+		post.Lat,
+		post.Lng,
+		post.Radius,
+		post.Type,
+		post.ImageURL,
+		pq.Array(post.AdditionalImages),
+		post.Description,
+		post.Bedrooms,
+		post.Bathrooms,
+		post.AvailableFrom,
+		post.AvailableTo,
+		time.Now(),
+		post.ID,
+		post.AuthorID,
+	)
+
 	if err != nil {
 		return err
 	}
 
-	stmt := `update users set password = $1 where id = $2`
-	_, err = db.ExecContext(ctx, stmt, hashedPassword, u.ID)
-	if err != nil {
-		return err
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
 	}
 
 	return nil
 }
 
-// =====================
-// 校验密码是否匹配
-// =====================
-func (u *User) PasswordMatches(plainText string) (bool, error) {
-	// bcrypt 比较明文密码与数据库存储的哈希密码
-	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(plainText))
+// Delete removes a post by ID (only if author matches)
+func (p *Post) Delete(id, authorID int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+	defer cancel()
+
+	stmt := `DELETE FROM posts WHERE id = $1 AND author_id = $2`
+
+	result, err := db.ExecContext(ctx, stmt, id, authorID)
 	if err != nil {
-		switch {
-		case errors.Is(err, bcrypt.ErrMismatchedHashAndPassword):
-			// 密码不匹配
-			return false, nil
-		default:
-			// 其他错误
-			return false, err
-		}
+		return err
 	}
 
-	return true, nil
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
 }

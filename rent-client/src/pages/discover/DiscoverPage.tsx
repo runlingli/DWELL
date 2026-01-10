@@ -1,10 +1,8 @@
-import React, { useMemo } from 'react';
-import { useUIStore, type SortOption } from '../../stores/UIStore';
-import { useListingsStore } from '../../stores/listingStore';
-import { useFavoritesStore } from '../../stores/favouriteStore';
-import { ListingCard } from '../../components/ListingCard';
-import { MapView } from '../../components/MapView';
-import { Select } from '../../components/UI';
+// src/pages/discover/DiscoverPage.tsx
+import React, { useMemo, useEffect } from 'react';
+import { useUIStore, useListingsStore, useFavoritesStore, type SortOption } from '@/stores';
+import { ListingCard, MapView } from '@/components';
+import { Select } from '@/ui';
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'newest', label: 'Newest' },
@@ -13,7 +11,7 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
 ];
 
 export const DiscoverPage: React.FC = () => {
-  const listings = useListingsStore((state) => state.listings);
+  const { listings, isLoading, fetchListings } = useListingsStore();
   const { favorites, toggleFavorite } = useFavoritesStore();
   const {
     sortBy,
@@ -27,17 +25,19 @@ export const DiscoverPage: React.FC = () => {
     mapCenter,
   } = useUIStore();
 
+  useEffect(() => {
+    fetchListings();
+  }, [fetchListings]);
+
   const filteredAndSortedListings = useMemo(() => {
     let result = [...listings];
 
-    // Apply date filtering
     if (filterStartDate && filterEndDate) {
       const startTs = new Date(filterStartDate).getTime();
       const endTs = new Date(filterEndDate).getTime();
       result = result.filter((l) => l.availableFrom <= startTs && l.availableTo >= endTs);
     }
 
-    // Apply sorting
     result.sort((a, b) => {
       if (sortBy === 'price-low') return a.price - b.price;
       if (sortBy === 'price-high') return b.price - a.price;
@@ -58,7 +58,6 @@ export const DiscoverPage: React.FC = () => {
 
         {/* Split View Map & Filters */}
         <div className="grid grid-cols-1 lg:grid-cols-12 lg:max-h-[400px] gap-0 border border-[#4a586e]/10 bg-white/10 backdrop-blur-sm overflow-hidden mb-16">
-          {/* Left Column: Map */}
           <div className="lg:col-span-8 border-b lg:border-b-0 lg:border-r border-[#4a586e]/10">
             <MapView
               listings={filteredAndSortedListings}
@@ -67,7 +66,6 @@ export const DiscoverPage: React.FC = () => {
             />
           </div>
 
-          {/* Right Column: Filters Sidebar */}
           <div className="lg:col-span-4 p-8 md:p-10 flex flex-col justify-between">
             <div>
               <div className="mb-10">
@@ -119,7 +117,7 @@ export const DiscoverPage: React.FC = () => {
 
             <div className="mt-12 pt-8 border-t border-[#4a586e]/10 flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#4a586e]/40">
-                {filteredAndSortedListings.length} Curated results
+                {isLoading ? 'Loading...' : `${filteredAndSortedListings.length} Curated results`}
               </span>
               {(filterStartDate || filterEndDate) && (
                 <button
@@ -135,7 +133,15 @@ export const DiscoverPage: React.FC = () => {
       </div>
 
       {/* Listing Grid */}
-      {filteredAndSortedListings.length > 0 ? (
+      {isLoading ? (
+        <div className="h-64 border border-dashed border-[#4a586e]/20 flex flex-col items-center justify-center gap-4 bg-white/10">
+          <div className="animate-pulse">
+            <p className="text-[#7e918b] uppercase tracking-widest text-[10px] font-bold">
+              Loading residences...
+            </p>
+          </div>
+        </div>
+      ) : filteredAndSortedListings.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-12">
           {filteredAndSortedListings.map((listing) => (
             <ListingCard

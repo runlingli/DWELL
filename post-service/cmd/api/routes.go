@@ -1,63 +1,34 @@
 package main
 
-// 导入标准库中的 net/http
-// http 包提供了 HTTP 服务器和客户端的基础能力
 import (
 	"net/http"
 
-	// chi 是一个轻量级的 HTTP 路由库
-	// 用来管理路由（URL -> 处理函数）
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-
-	// cors 用来处理跨域请求（CORS）
-	// 当前端和后端不在同一个域名/端口时必须用
 	"github.com/go-chi/cors"
 )
 
-// routes 是 Config 结构体的一个方法
-// 它负责：
-// 1. 创建路由器
-// 2. 注册中间件
-// 3. 绑定路由
-// 4. 最终返回一个 http.Handler
 func (app *Config) routes() http.Handler {
-	// 创建一个新的 chi 路由器
-	// mux 可以理解为“路由总管”
 	mux := chi.NewRouter()
 
-	// 使用 CORS 中间件
-	// 作用：允许浏览器从其他域名访问你的后端 API
 	mux.Use(cors.Handler(cors.Options{
-		// 允许哪些来源访问你的后端
-		// https://* 和 http://* 表示：允许所有 http / https 域名
-		AllowedOrigins: []string{"https://*", "http://*"},
-		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-
-		// 允许前端在请求中携带哪些 HTTP 头
-		AllowedHeaders: []string{
-			"Accept",
-			"Authorization",
-			"Content-Type",
-			"X-CSRF-TOKEN",
-		},
-
-		// 允许前端“读取”的响应头
-		// 默认情况下浏览器只能读到少量响应头
-		ExposedHeaders: []string{"Link"},
-
+		AllowedOrigins:   []string{"https://*", "http://*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-TOKEN"},
+		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: true,
-
-		// 预检请求（OPTIONS）的缓存时间（单位：秒）
-		// 300 秒内，浏览器不会重复发送 OPTIONS 请求
-		MaxAge: 300,
+		MaxAge:           300,
 	}))
 
 	mux.Use(middleware.Heartbeat("/ping"))
 
-	mux.Post("/post", app.Post)
+	// Post routes
+	mux.Get("/posts", app.GetAllPosts)
+	mux.Get("/posts/{id}", app.GetPostByID)
+	mux.Get("/posts/author/{authorId}", app.GetPostsByAuthor)
+	mux.Post("/posts", app.CreatePost)
+	mux.Put("/posts/{id}", app.UpdatePost)
+	mux.Delete("/posts/{id}", app.DeletePost)
 
-	// 返回配置完成的路由器
-	// mux 实现了 http.Handler 接口
 	return mux
 }

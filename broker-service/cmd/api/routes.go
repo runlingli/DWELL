@@ -81,6 +81,24 @@ func (app *Config) routes() http.Handler {
 
 	mux.HandleFunc("/oauth/google/login", app.oauthGoogleLogin)
 
+	// RESTful API routes for posts
+	mux.Get("/posts", app.GetAllPostsREST)
+	mux.Get("/posts/{id}", app.GetPostByIDREST)
+	mux.Post("/posts", app.CreatePostREST)
+	mux.Put("/posts/{id}", app.UpdatePostREST)
+	mux.Delete("/posts/{id}", app.DeletePostREST)
+
+	// RESTful API routes for auth
+	mux.Route("/auth", func(r chi.Router) {
+		r.Post("/login", app.LoginREST)
+		r.Post("/logout", app.LogoutREST)
+		r.Post("/register", app.RegisterREST)
+		r.Post("/verify-email", app.VerifyEmailREST)
+		r.Post("/forgot-password", app.ForgotPasswordREST)
+		r.Post("/reset-password", app.ResetPasswordREST)
+		r.Get("/profile", app.ProfileREST)
+	})
+
 	// 返回配置完成的路由器
 	// mux 实现了 http.Handler 接口
 	return mux

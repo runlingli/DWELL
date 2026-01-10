@@ -64,26 +64,33 @@ func (app *Config) routes() http.Handler {
 
 	mux.Use(middleware.Heartbeat("/ping"))
 
-	// Authentication
+	// RESTful Auth API
+	mux.Route("/auth", func(r chi.Router) {
+		r.Post("/login", app.Authenticate)      // POST /auth/login
+		r.Post("/logout", app.Logout)           // POST /auth/logout
+		r.Post("/register", app.Register)       // POST /auth/register
+		r.Post("/verify-email", app.VerifyEmail) // POST /auth/verify-email
+		r.Post("/forgot-password", app.ForgotPassword) // POST /auth/forgot-password
+		r.Post("/reset-password", app.ResetPassword)   // POST /auth/reset-password
+		r.Get("/profile", app.Profile)          // GET /auth/profile
+	})
+
+	// OAuth routes
+	mux.Route("/oauth", func(r chi.Router) {
+		r.Get("/google/login", app.GoogleLoginHandler)        // GET /oauth/google/login
+		r.Get("/google/callback", app.GoogleCallbackHandler)  // GET /oauth/google/callback
+	})
+
+	// Legacy routes (for backward compatibility)
 	mux.Post("/authenticate", app.Authenticate)
 	mux.Post("/logout", app.Logout)
-
-	// OAuth
 	mux.HandleFunc("/authenticate/google", app.GoogleLoginHandler)
 	mux.HandleFunc("/oauth/google/callback", app.GoogleCallbackHandler)
-
-	// Registration
 	mux.Post("/register", app.Register)
 	mux.Post("/verify-email", app.VerifyEmail)
-
-	// Password Reset
 	mux.Post("/forgot-password", app.ForgotPassword)
 	mux.Post("/reset-password", app.ResetPassword)
-
-	// Resources
 	mux.Get("/resource/profile", app.Profile)
 
-	// 返回配置完成的路由器
-	// mux 实现了 http.Handler 接口
 	return mux
 }

@@ -1,8 +1,7 @@
-// components/layout/Header.tsx
+// src/components/layout/Header.tsx
 import React from 'react';
-import { useAuthStore } from '../../stores/authStore';
-import { useUIStore, type ViewType } from '../../stores/UIStore';
-import { Button } from '../UI';
+import { useAuthStore, useUIStore, type ViewType } from '@/stores';
+import { Button } from '@/ui';
 
 export const Header: React.FC = () => {
   const { currentUser, logout } = useAuthStore();
@@ -16,8 +15,8 @@ export const Header: React.FC = () => {
     navigate(targetView);
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('discover');
   };
 
@@ -31,7 +30,6 @@ export const Header: React.FC = () => {
           TinyRent
         </button>
 
-        {/* Nav */}
         <nav className="hidden md:flex items-center gap-12 text-[10px] font-bold uppercase tracking-[0.3em]">
           <button
             onClick={() => handleNavClick('discover')}
@@ -58,11 +56,7 @@ export const Header: React.FC = () => {
         <div className="flex items-center gap-4">
           {currentUser ? (
             <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                className="hidden sm:block !py-2 !px-4"
-                onClick={openCreateModal}
-              >
+              <Button variant="outline" className="hidden sm:block !py-2 !px-4" onClick={openCreateModal}>
                 Post
               </Button>
 
@@ -70,9 +64,7 @@ export const Header: React.FC = () => {
                 onClick={handleLogout}
                 className="w-10 h-10 border border-[#4a586e] flex items-center justify-center hover:bg-[#4a586e] hover:text-[#f3e9d2] transition-all group text-[#4a586e]"
               >
-                <span className="text-[10px] font-bold group-hover:hidden uppercase tracking-tighter">
-                  ME
-                </span>
+                <span className="text-[10px] font-bold group-hover:hidden uppercase tracking-tighter">ME</span>
                 <svg
                   className="hidden group-hover:block w-4 h-4"
                   fill="none"

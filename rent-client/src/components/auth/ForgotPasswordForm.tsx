@@ -1,6 +1,6 @@
 // src/components/auth/ForgotPasswordForm.tsx
 import React from 'react';
-import { Input, Button } from '../UI';
+import { Input, Button } from '../../UI';
 
 interface ForgotPasswordFormProps {
   email: string;

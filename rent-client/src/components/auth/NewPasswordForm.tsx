@@ -1,6 +1,6 @@
 // src/components/auth/NewPasswordForm.tsx
 import React, { useState } from 'react';
-import { Input, Button } from '../UI';
+import { Input, Button } from '../../UI';
 
 interface NewPasswordFormProps {
   isLoading: boolean;

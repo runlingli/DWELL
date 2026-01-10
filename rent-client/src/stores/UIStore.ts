@@ -1,13 +1,13 @@
-// src/store/uiStore.ts
+// src/stores/UIStore.ts
 import { create } from 'zustand';
-import type { Listing } from '../types/types';
+import type { Listing } from '@/types';
 
 export type ViewType = 'discover' | 'profile';
 export type ProfileTab = 'favorites' | 'posts';
 export type SortOption = 'newest' | 'price-low' | 'price-high';
 
 export interface UIState {
-  // ===== state =====
+  // State
   view: ViewType;
   profileTab: ProfileTab;
   sortBy: SortOption;
@@ -19,26 +19,26 @@ export interface UIState {
   filterStartDate: string;
   filterEndDate: string;
 
-  // ===== navigation =====
+  // Navigation
   navigate: (view: ViewType) => void;
   setProfileTab: (tab: ProfileTab) => void;
   setSortBy: (sort: SortOption) => void;
   resetToHome: () => void;
 
-  // ===== auth modal =====
+  // Auth modal
   openAuthModal: () => void;
   closeAuthModal: () => void;
 
-  // ===== create / edit modal =====
+  // Create/edit modal
   openCreateModal: () => void;
   openEditModal: (listing: Listing) => void;
   closeCreateModal: () => void;
 
-  // ===== listing selection =====
+  // Listing selection
   selectListing: (listing: Listing) => void;
   clearSelectedListing: () => void;
 
-  // ===== filters =====
+  // Filters
   setFilterStartDate: (date: string) => void;
   setFilterEndDate: (date: string) => void;
   clearFilters: () => void;
@@ -56,7 +56,7 @@ export const useUIStore = create<UIState>((set) => ({
   filterStartDate: '',
   filterEndDate: '',
 
-  // ===== navigation =====
+  // Navigation
   navigate: (view: ViewType) =>
     set({
       view,
@@ -76,11 +76,11 @@ export const useUIStore = create<UIState>((set) => ({
       filterEndDate: '',
     }),
 
-  // ===== auth modal =====
+  // Auth modal
   openAuthModal: () => set({ showAuthModal: true }),
   closeAuthModal: () => set({ showAuthModal: false }),
 
-  // ===== create / edit modal =====
+  // Create/edit modal
   openCreateModal: () =>
     set({
       showCreateModal: true,
@@ -99,7 +99,7 @@ export const useUIStore = create<UIState>((set) => ({
       listingToEdit: null,
     }),
 
-  // ===== listing selection =====
+  // Listing selection
   selectListing: (listing: Listing) =>
     set({
       selectedListing: listing,
@@ -111,7 +111,7 @@ export const useUIStore = create<UIState>((set) => ({
       selectedListing: null,
     }),
 
-  // ===== filters =====
+  // Filters
   setFilterStartDate: (date: string) =>
     set((state) => ({
       filterStartDate: date,

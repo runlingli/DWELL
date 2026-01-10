@@ -1,7 +1,6 @@
-// This component renders an interactive map using Leaflet to display rental listings in Davis, CA.
-
+// src/components/map/MapView.tsx
 import React, { useEffect, useRef } from 'react';
-import type { Listing } from '../types/types';
+import type { Listing } from '@/types';
 
 declare const L: any;
 
@@ -25,18 +24,18 @@ export const MapView: React.FC<MapViewProps> = ({ listings, onMarkerClick, cente
         zoom: 13,
         zoomControl: false,
         attributionControl: false,
-        scrollWheelZoom: true 
+        scrollWheelZoom: true,
       });
 
       L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        maxZoom: 19
+        maxZoom: 19,
       }).addTo(mapRef.current);
     }
 
     const map = mapRef.current;
 
     // Clear previous layers
-    layersRef.current.forEach(layer => map.removeLayer(layer));
+    layersRef.current.forEach((layer) => map.removeLayer(layer));
     layersRef.current = [];
 
     listings.forEach((listing) => {
@@ -48,19 +47,19 @@ export const MapView: React.FC<MapViewProps> = ({ listings, onMarkerClick, cente
         opacity: 0.3,
         fillColor: '#4a586e',
         fillOpacity: 0.05,
-        interactive: false 
+        interactive: false,
       }).addTo(map);
-      
+
       // Create custom price tag icon
       const priceIcon = L.divIcon({
-        className: 'price-tag-container', 
+        className: 'price-tag-container',
         html: `<div class="price-tag-marker">$${listing.price.toLocaleString()}</div>`,
         iconSize: [60, 24],
-        iconAnchor: [30, 12]
+        iconAnchor: [30, 12],
       });
 
       const priceMarker = L.marker([listing.coordinates.lat, listing.coordinates.lng], {
-        icon: priceIcon
+        icon: priceIcon,
       }).addTo(map);
 
       priceMarker.on('click', () => onMarkerClick(listing));
