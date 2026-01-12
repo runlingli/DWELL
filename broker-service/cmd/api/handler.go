@@ -475,41 +475,29 @@ func (app *Config) forwardToPostService(w http.ResponseWriter, method, url strin
 }
 
 func (app *Config) sendMail(w http.ResponseWriter, msg MailPayload) {
-	jsonData, _ := json.MarshalIndent(msg, "", "\t")
-
-	// call the mail service
-	mailServiceURL := "http://mailer-service/send"
-
-	// post to mail service
-	request, err := http.NewRequest("POST", mailServiceURL, bytes.NewBuffer(jsonData))
+	// Send mail via RabbitMQ (async)
+	err := app.sendMailViaRabbit(msg.To, msg.Subject, msg.Message)
 	if err != nil {
+		log.Printf("Error sending mail via RabbitMQ: %v", err)
 		app.errorJSON(w, err)
-		return
-	}
-
-	request.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{Timeout: 5 * time.Second}
-	response, err := client.Do(request)
-	if err != nil {
-		app.errorJSON(w, err)
-		return
-	}
-	defer response.Body.Close()
-
-	// make sure we get back the right status code
-	if response.StatusCode != http.StatusAccepted {
-		app.errorJSON(w, errors.New("error calling mail service"))
 		return
 	}
 
 	// send back json
 	var payload jsonResponse
 	payload.Error = false
-	payload.Message = "Message sent to " + msg.To
+	payload.Message = "Message queued for delivery to " + msg.To
 
 	app.writeJSON(w, http.StatusAccepted, payload)
+}
 
+// sendMailViaRabbit sends an email through RabbitMQ
+func (app *Config) sendMailViaRabbit(to, subject, message string) error {
+	emitter, err := event.NewEventEmitter(app.Rabbit)
+	if err != nil {
+		return err
+	}
+	return emitter.SendMail(to, subject, message)
 }
 
 // logEventViaRabbit 通过 RabbitMQ 将日志事件发送给 logger-service。
@@ -625,4 +613,100 @@ func (app *Config) ResetPasswordREST(w http.ResponseWriter, r *http.Request) {
 func (app *Config) ProfileREST(w http.ResponseWriter, r *http.Request) {
 	log.Println("RESTful: GET /auth/profile")
 	app.forwardToAuthService(w, r, "GET", "http://authentication-service/auth/profile", nil)
+}
+
+// =======================
+// RESTful Favorites API Handlers
+// =======================
+
+func (app *Config) GetUserFavoriteIDsREST(w http.ResponseWriter, r *http.Request) {
+	userId := chi.URLParam(r, "userId")
+	log.Printf("RESTful: GET favorites for user: %s", userId)
+	url := "http://favourite-service/favorites/" + userId + "/ids"
+	app.forwardToFavoriteService(w, "GET", url, nil)
+}
+
+func (app *Config) AddFavoriteREST(w http.ResponseWriter, r *http.Request) {
+	log.Println("RESTful: POST /favorites")
+	var payload struct {
+		UserID int `json:"userId"`
+		PostID int `json:"postId"`
+	}
+	if err := app.readJSON(w, r, &payload); err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	app.forwardToFavoriteService(w, "POST", "http://favourite-service/favorites", payload)
+}
+
+func (app *Config) RemoveFavoriteREST(w http.ResponseWriter, r *http.Request) {
+	userId := chi.URLParam(r, "userId")
+	postId := chi.URLParam(r, "postId")
+	log.Printf("RESTful: DELETE favorite - user: %s, post: %s", userId, postId)
+	url := "http://favourite-service/favorites/" + userId + "/" + postId
+	app.forwardToFavoriteService(w, "DELETE", url, nil)
+}
+
+func (app *Config) SyncFavoritesREST(w http.ResponseWriter, r *http.Request) {
+	log.Println("RESTful: POST /favorites/sync")
+	var payload struct {
+		UserID  int   `json:"userId"`
+		PostIDs []int `json:"postIds"`
+	}
+	if err := app.readJSON(w, r, &payload); err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	app.forwardToFavoriteService(w, "POST", "http://favourite-service/favorites/sync", payload)
+}
+
+func (app *Config) forwardToFavoriteService(w http.ResponseWriter, method, url string, body any) {
+	var reader *bytes.Reader
+	if body != nil {
+		jsonData, err := json.MarshalIndent(body, "", "\t")
+		if err != nil {
+			app.errorJSON(w, err)
+			return
+		}
+		log.Printf("Forwarding request to %s, body: %s", url, string(jsonData))
+		reader = bytes.NewReader(jsonData)
+	} else {
+		reader = bytes.NewReader(nil)
+	}
+
+	req, err := http.NewRequest(method, url, reader)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	var payload jsonResponse
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	if payload.Error {
+		log.Printf("Favorite service returned error: %s", payload.Message)
+		statusCode := resp.StatusCode
+		if statusCode == 0 {
+			statusCode = http.StatusInternalServerError
+		}
+		app.errorJSON(w, errors.New(payload.Message), statusCode)
+		return
+	}
+
+	app.writeJSON(w, resp.StatusCode, payload)
 }

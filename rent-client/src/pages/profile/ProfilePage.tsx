@@ -2,13 +2,20 @@
 import React from 'react';
 import { useAuthStore, useUIStore, useFavoritesStore, useListingsStore } from '@/stores';
 import { ListingCard } from '@/components';
-import { getUserDisplayName } from '@/utils';
+import { getUserDisplayName, getUserId } from '@/utils';
+import avatarIcon from '@/assets/avatar.svg';
 
 export const ProfilePage: React.FC = () => {
   const currentUser = useAuthStore((state) => state.currentUser);
   const listings = useListingsStore((state) => state.listings);
   const { favorites, toggleFavorite } = useFavoritesStore();
-  const { profileTab, setProfileTab, openCreateModal, selectListing } = useUIStore();
+  const { profileTab, setProfileTab, selectListing } = useUIStore();
+
+  const userId = getUserId(currentUser);
+
+  const handleToggleFavorite = (id: string) => {
+    toggleFavorite(id, userId);
+  };
 
   if (!currentUser) {
     return (
@@ -28,20 +35,14 @@ export const ProfilePage: React.FC = () => {
       {/* User Info */}
       <div className="mb-16">
         <div className="flex items-center gap-8 mb-12">
-          <div className="w-24 h-24 bg-[#4a586e] flex items-center justify-center text-[#f3e9d2] text-4xl font-serif">
-            {currentUser.first_name.charAt(0).toUpperCase()}
+          <div className="w-24 h-24 bg-[#4a586e] flex items-center justify-center text-[#f3e9d2] text-4xl font-serif rounded-3xl">
+            {/*{currentUser.first_name.charAt(0).toUpperCase()}*/}
+			 <img src={avatarIcon} alt="avatar" className='w-20 h-20 self-center' />
           </div>
           <div>
             <h1 className="font-serif text-5xl text-[#4a586e] tracking-tighter mb-1">{displayName}</h1>
             <p className="text-[#7e918b] text-xs tracking-[0.3em] font-bold">{currentUser.email}</p>
           </div>
-
-          <button
-            onClick={openCreateModal}
-            className="ml-auto border border-[#4a586e] px-4 py-2 text-[#4a586e] font-bold hover:bg-[#4a586e] hover:text-[#f3e9d2] transition-colors text-[10px] uppercase tracking-widest"
-          >
-            New Post
-          </button>
         </div>
 
         <div className="flex gap-12 border-b border-[#4a586e]/10 mb-12">
@@ -76,7 +77,7 @@ export const ProfilePage: React.FC = () => {
               key={listing.id}
               listing={listing}
               isFavorite={favorites.includes(listing.id)}
-              onToggleFavorite={toggleFavorite}
+              onToggleFavorite={handleToggleFavorite}
               onClick={selectListing}
             />
           ))}

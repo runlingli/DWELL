@@ -6,6 +6,7 @@ import { useDeleteConfirmation } from '@/hooks';
 import { DetailTopBar } from './DetailTopBar';
 import { DetailContent } from './DetailContent';
 
+
 interface ListingDetailProps {
   listing: Listing;
   isOpen: boolean;
@@ -34,7 +35,7 @@ export const ListingDetail: React.FC<ListingDetailProps> = ({
   const isAuthor = currentUser ? getUserDisplayName(currentUser) === listing.author.name : false;
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 md:p-10 lg:p-16">
+    <div className="fixed inset-0 z-1000 flex items-center justify-center p-4 md:p-10 lg:p-16">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-[#4a586e]/60 backdrop-blur-sm animate-in fade-in duration-500"

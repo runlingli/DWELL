@@ -8,7 +8,7 @@ import (
 )
 
 func (app *Config) readJSON(w http.ResponseWriter, r *http.Request, data any) error {
-	maxBytes := 10485760 // 10 megabytes (to support base64 images)
+	maxBytes := 1048576 // one megabyte
 	r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
 
 	dec := json.NewDecoder(r.Body)

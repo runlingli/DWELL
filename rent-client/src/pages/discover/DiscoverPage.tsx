@@ -1,8 +1,9 @@
 // src/pages/discover/DiscoverPage.tsx
 import React, { useMemo, useEffect } from 'react';
-import { useUIStore, useListingsStore, useFavoritesStore, type SortOption } from '@/stores';
+import { useUIStore, useListingsStore, useFavoritesStore, useAuthStore, type SortOption } from '@/stores';
 import { ListingCard, MapView } from '@/components';
 import { Select } from '@/ui';
+import { getUserId } from '@/utils';
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'newest', label: 'Newest' },
@@ -13,6 +14,7 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
 export const DiscoverPage: React.FC = () => {
   const { listings, isLoading, fetchListings } = useListingsStore();
   const { favorites, toggleFavorite } = useFavoritesStore();
+  const currentUser = useAuthStore((state) => state.currentUser);
   const {
     sortBy,
     setSortBy,
@@ -24,6 +26,12 @@ export const DiscoverPage: React.FC = () => {
     selectListing,
     mapCenter,
   } = useUIStore();
+
+  const userId = getUserId(currentUser);
+
+  const handleToggleFavorite = (id: string) => {
+    toggleFavorite(id, userId);
+  };
 
   useEffect(() => {
     fetchListings();
@@ -48,16 +56,16 @@ export const DiscoverPage: React.FC = () => {
   }, [listings, sortBy, filterStartDate, filterEndDate]);
 
   return (
-    <main className="flex-grow pt-32 pb-20 px-6 max-w-7xl mx-auto w-full">
+    <main className="grow pt-32 pb-20 px-6 max-w-7xl mx-auto w-full">
       <div className="mb-16">
         <div className="mb-5">
           <h1 className="font-serif text-6xl md:text-8xl mb-6 tracking-tighter text-[#4a586e] leading-none">
-            Short Period Residences
+            Short Term Residences
           </h1>
         </div>
 
         {/* Split View Map & Filters */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 lg:max-h-[400px] gap-0 border border-[#4a586e]/10 bg-white/10 backdrop-blur-sm overflow-hidden mb-16">
+        <div className="grid grid-cols-1 lg:grid-cols-12 lg:max-h-100 gap-0 border border-[#4a586e]/10 bg-white/10 backdrop-blur-sm overflow-hidden mb-16">
           <div className="lg:col-span-8 border-b lg:border-b-0 lg:border-r border-[#4a586e]/10">
             <MapView
               listings={filteredAndSortedListings}
@@ -148,7 +156,7 @@ export const DiscoverPage: React.FC = () => {
               key={listing.id}
               listing={listing}
               isFavorite={favorites.includes(listing.id)}
-              onToggleFavorite={toggleFavorite}
+              onToggleFavorite={handleToggleFavorite}
               onClick={selectListing}
             />
           ))}

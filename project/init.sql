@@ -1,4 +1,3 @@
--- Users table (already exists, this is for reference)
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     google_id VARCHAR(255),
@@ -11,7 +10,6 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Posts/Listings table
 CREATE TABLE IF NOT EXISTS posts (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
@@ -23,7 +21,7 @@ CREATE TABLE IF NOT EXISTS posts (
     radius INT DEFAULT 300,
     type VARCHAR(50) NOT NULL,
     image_url TEXT,
-    additional_images TEXT[], -- Array of image URLs
+    additional_images TEXT[],
     description TEXT,
     bedrooms INT DEFAULT 1,
     bathrooms INT DEFAULT 1,
@@ -38,3 +36,16 @@ CREATE TABLE IF NOT EXISTS posts (
 CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id);
 CREATE INDEX IF NOT EXISTS idx_posts_neighborhood ON posts(neighborhood);
 CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
+
+-- Favorites table
+CREATE TABLE IF NOT EXISTS favorites (
+    user_id     INTEGER NOT NULL,
+    post_id     INTEGER NOT NULL,
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    PRIMARY KEY (user_id, post_id),
+    CONSTRAINT fk_favorites_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_favorites_post FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id);
+CREATE INDEX IF NOT EXISTS idx_favorites_post_id ON favorites(post_id);

@@ -27,9 +27,10 @@ type jsonResponse struct {
 // readJSON 的作用是：
 // 从 HTTP 请求体中读取 JSON，并解析到 data 中
 func (app *Config) readJSON(w http.ResponseWriter, r *http.Request, data any) error {
-	// 限制请求体的最大大小（1 MB）
+	// 限制请求体的最大大小（10 MB）
 	// 防止客户端发送超大 body，导致内存被耗尽（一种常见攻击方式）
-	maxBytes := 1048576 // one megabyte
+	// 增加到10MB以支持base64编码的图片
+	maxBytes := 10485760 // 10 megabytes
 
 	// 使用 MaxBytesReader 包装原始的 r.Body
 	// 如果请求体超过 maxBytes，会直接报错

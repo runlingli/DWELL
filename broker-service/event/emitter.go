@@ -1,54 +1,84 @@
 package event
 
 import (
+	"encoding/json"
 	"log"
 
-	amqp "github.com/rabbitmq/amqp091-go" // RabbitMQ 官方 Go 客户端
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-// Emitter 封装了向 RabbitMQ 发布事件的逻辑
+// Emitter handles publishing events to RabbitMQ
 type Emitter struct {
-	connection *amqp.Connection // RabbitMQ 连接对象
+	connection *amqp.Connection
 }
 
-// setup 用于初始化 Emitter，例如声明交换机
+// MailEvent represents an email to be sent
+type MailEvent struct {
+	To      string `json:"to"`
+	Subject string `json:"subject"`
+	Message string `json:"message"`
+}
+
+// VerificationMailEvent represents a verification email
+type VerificationMailEvent struct {
+	To               string `json:"to"`
+	FirstName        string `json:"first_name"`
+	VerificationCode string `json:"verification_code"`
+	Type             string `json:"type"` // "signup" or "password_reset"
+}
+
+// NotificationEvent represents a notification
+type NotificationEvent struct {
+	UserID  int    `json:"user_id"`
+	Title   string `json:"title"`
+	Message string `json:"message"`
+	Type    string `json:"type"`
+}
+
+// setup initializes the emitter by declaring all exchanges
 func (e *Emitter) setup() error {
-	// 创建一个 channel
 	channel, err := e.connection.Channel()
 	if err != nil {
 		return err
 	}
-
-	// defer 确保函数结束时关闭 channel，避免资源泄露
 	defer channel.Close()
 
-	// 声明交换机（logs_topic），确保消息可以路由
-	// 确保交换机存在，或者先创建交换机。listener和producer拿到同一个交换机。
-	return declareExchange(channel)
+	return DeclareAllExchanges(channel)
 }
 
-// Push 向指定交换机发送一条消息
-// event: 消息内容
-// severity: routing key，例如 "log.INFO", "log.ERROR"
+// Push sends a message to the logs exchange (legacy method)
 func (e *Emitter) Push(event string, severity string) error {
-	// 每次发送消息都需要一个 channel
+	return e.pushToExchange(ExchangeLogs, severity, []byte(event))
+}
+
+// PushToApp sends a message to the app events exchange
+func (e *Emitter) PushToApp(routingKey string, payload any) error {
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	return e.pushToExchange(ExchangeApp, routingKey, jsonData)
+}
+
+// pushToExchange is the internal method that publishes to any exchange
+func (e *Emitter) pushToExchange(exchange, routingKey string, body []byte) error {
 	channel, err := e.connection.Channel()
 	if err != nil {
 		return err
 	}
-	defer channel.Close() // 发送完毕关闭 channel
+	defer channel.Close()
 
-	log.Println("Pushing to channel")
+	log.Printf("Pushing to exchange [%s] with routing key [%s]", exchange, routingKey)
 
-	// 发布消息到交换机
 	err = channel.Publish(
-		"logs_topic", // 交换机名称
-		severity,     // routing key
-		false,        // mandatory：如果 true 且没有匹配队列会返回消息
-		false,        // immediate：如果 true 且没有消费者会返回消息
+		exchange,   // exchange
+		routingKey, // routing key
+		false,      // mandatory
+		false,      // immediate
 		amqp.Publishing{
-			ContentType: "text/plain",  // 消息类型
-			Body:        []byte(event), // 消息内容，需要转成 []byte
+			ContentType:  "application/json",
+			Body:         body,
+			DeliveryMode: amqp.Persistent, // Message survives broker restart
 		},
 	)
 	if err != nil {
@@ -58,13 +88,44 @@ func (e *Emitter) Push(event string, severity string) error {
 	return nil
 }
 
-// NewEventEmitter 创建一个新的 Emitter 对象，并执行初始化
+// SendMail publishes a mail event to RabbitMQ
+func (e *Emitter) SendMail(to, subject, message string) error {
+	event := MailEvent{
+		To:      to,
+		Subject: subject,
+		Message: message,
+	}
+	return e.PushToApp(RoutingMailSend, event)
+}
+
+// SendVerificationMail publishes a verification email event
+func (e *Emitter) SendVerificationMail(to, firstName, code, mailType string) error {
+	event := VerificationMailEvent{
+		To:               to,
+		FirstName:        firstName,
+		VerificationCode: code,
+		Type:             mailType,
+	}
+	return e.PushToApp(RoutingMailVerification, event)
+}
+
+// SendNotification publishes a notification event
+func (e *Emitter) SendNotification(userID int, title, message, notifType string) error {
+	event := NotificationEvent{
+		UserID:  userID,
+		Title:   title,
+		Message: message,
+		Type:    notifType,
+	}
+	return e.PushToApp(RoutingNotification, event)
+}
+
+// NewEventEmitter creates a new Emitter instance
 func NewEventEmitter(conn *amqp.Connection) (Emitter, error) {
 	emitter := Emitter{
-		connection: conn, // 绑定连接
+		connection: conn,
 	}
 
-	// 执行 setup 初始化交换机等
 	err := emitter.setup()
 	if err != nil {
 		return Emitter{}, err

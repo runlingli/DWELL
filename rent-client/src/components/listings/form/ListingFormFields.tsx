@@ -36,7 +36,6 @@ export const ListingFormFields: React.FC<ListingFormFieldsProps> = ({
           placeholder="TITLE"
           value={formData.title}
           onChange={(e) => onFieldChange('title', e.target.value)}
-          uppercase
           required
         />
 
@@ -105,7 +104,6 @@ export const ListingFormFields: React.FC<ListingFormFieldsProps> = ({
             placeholder="E.G. NEAR E ST & 2ND"
             value={formData.address}
             onChange={(e) => onFieldChange('address', e.target.value)}
-            uppercase
             required
           />
         </div>
@@ -146,7 +144,7 @@ export const ListingFormFields: React.FC<ListingFormFieldsProps> = ({
         </label>
         <textarea
           placeholder="DESCRIBE THE SPACE AND ITS ESSENCE..."
-          className="w-full bg-transparent border border-[#4a586e]/20 p-6 focus:border-[#4a586e] outline-none transition-colors placeholder:text-[#4a586e]/30 text-[11px] h-40 resize-none font-bold uppercase tracking-widest"
+          className="w-full bg-transparent border border-[#4a586e]/20 p-6 focus:border-[#4a586e] outline-none transition-colors placeholder:text-[#4a586e]/30 text-[11px] h-40 resize-none font-bold tracking-widest"
           value={formData.description}
           onChange={(e) => onFieldChange('description', e.target.value)}
           required

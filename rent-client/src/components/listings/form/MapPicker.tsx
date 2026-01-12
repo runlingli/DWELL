@@ -91,7 +91,7 @@ export const MapPicker: React.FC<MapPickerProps> = ({
           step="50"
           value={radius}
           onChange={(e) => onRadiusChange(Number(e.target.value))}
-          className="w-full h-[1px] bg-[#4a586e]/20 appearance-none cursor-pointer accent-[#4a586e]"
+          className="w-full h-px bg-[#4a586e]/20 appearance-none cursor-pointer accent-[#4a586e]"
         />
       </div>
     </div>

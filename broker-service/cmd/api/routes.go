@@ -99,6 +99,12 @@ func (app *Config) routes() http.Handler {
 		r.Get("/profile", app.ProfileREST)
 	})
 
+	// RESTful API routes for favorites
+	mux.Get("/favorites/{userId}/ids", app.GetUserFavoriteIDsREST)
+	mux.Post("/favorites", app.AddFavoriteREST)
+	mux.Delete("/favorites/{userId}/{postId}", app.RemoveFavoriteREST)
+	mux.Post("/favorites/sync", app.SyncFavoritesREST)
+
 	// 返回配置完成的路由器
 	// mux 实现了 http.Handler 接口
 	return mux

@@ -2,6 +2,7 @@
 import React from 'react';
 import type { Listing } from '@/types';
 import { Button } from '@/ui';
+import avatarIcon from '@/assets/avatar.svg';
 
 interface DetailContentProps {
   listing: Listing;
@@ -92,7 +93,7 @@ export const DetailContent: React.FC<DetailContentProps> = ({ listing }) => {
             </div>
 
             <div className="flex items-center gap-4 border-t border-[#4a586e]/10 pt-8 mb-8">
-              <div className="w-12 h-12 bg-[#4a586e] flex items-center justify-center grayscale">
+              <div className="w-12 h-12 bg-[#4a586e] rounded-xl flex items-center justify-center">
                 {listing.author.avatar ? (
                   <img
                     src={listing.author.avatar}
@@ -100,7 +101,7 @@ export const DetailContent: React.FC<DetailContentProps> = ({ listing }) => {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="text-[#f3e9d2] font-serif text-xl">{listing.author.name.charAt(0)}</div>
+					 <img src={avatarIcon} alt="avatar" className="w-10 h-10 self-center" />
                 )}
               </div>
               <div>

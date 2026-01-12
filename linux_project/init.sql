@@ -38,3 +38,16 @@ CREATE TABLE IF NOT EXISTS posts (
 CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id);
 CREATE INDEX IF NOT EXISTS idx_posts_neighborhood ON posts(neighborhood);
 CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
+
+-- Favorites table
+CREATE TABLE IF NOT EXISTS favorites (
+    user_id     INTEGER NOT NULL,
+    post_id     INTEGER NOT NULL,
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    PRIMARY KEY (user_id, post_id),
+    CONSTRAINT fk_favorites_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_favorites_post FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id);
+CREATE INDEX IF NOT EXISTS idx_favorites_post_id ON favorites(post_id);
