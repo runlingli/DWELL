@@ -13,12 +13,6 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// =======================
-// 前端 → Broker 的请求结构
-// =======================
-
-// RequestPayload 表示：
-// 前端发送给 broker 的完整 JSON 请求结构
 type RequestPayload struct {
 	Action         string               `json:"action"`
 	Register       regPayload           `json:"register,omitempty"`
@@ -97,52 +91,35 @@ type DeletePostPayload struct {
 	AuthorID int `json:"authorId"`
 }
 
-// =======================
-// Broker 测试接口
-// =======================
-
-// Broker 是一个 HTTP handler
 func (app *Config) Broker(w http.ResponseWriter, r *http.Request) {
 
-	// 构造一个标准 JSON 响应
 	payload := jsonResponse{
-		Error:   false,            // 没有错误
-		Message: "Hit the broker", // 只是返回一条提示信息
+		Error:   false,
+		Message: "Hit the broker",
 	}
 
 	_ = app.writeJSON(w, http.StatusOK, payload)
 }
 
-// =======================
-// Broker 核心入口
-// =======================
-
 func (app *Config) HandleSubmission(w http.ResponseWriter, r *http.Request) {
 
-	// 用于接收前端 JSON 请求
 	var requestPayload RequestPayload
 
-	// 读取并解析请求体 JSON
 	err := app.readJSON(w, r, &requestPayload)
 	if err != nil {
-		// JSON 解析失败（格式错误、字段不对等）
 		app.errorJSON(w, err)
 		return
 	}
 	log.Printf("Received request for action: %s", requestPayload.Action)
-	// 根据 action 决定调用哪个微服务
 	switch requestPayload.Action {
 
 	case "register":
-		// 注册 → 转发给 authentication-service
 		app.register(w, requestPayload.Register)
 
 	case "auth":
-		// 登录认证 → 转发给 authentication-service
 		app.authenticate(w, requestPayload.Auth)
 
 	case "logout":
-		// 登出 → 转发给 authentication-service
 		app.logout(w, r)
 
 	case "log":
@@ -152,34 +129,27 @@ func (app *Config) HandleSubmission(w http.ResponseWriter, r *http.Request) {
 		app.sendMail(w, requestPayload.Mail)
 
 	case "verify":
-		// 验证码验证 → 转发给 authentication-service
 		app.verifyCode(w, requestPayload.Verify)
 
 	case "resource":
 		app.getResource(w, r, requestPayload.Resource)
 
 	case "forgot-password":
-		// 忘记密码 → 转发给 authentication-service
 		app.forgotPassword(w, requestPayload.ForgotPassword)
 
 	case "reset-password":
-		// 重置密码 → 转发给 authentication-service
 		app.resetPassword(w, requestPayload.ResetPassword)
 
 	case "get-posts":
-		// 获取所有帖子 → 转发给 post-service
 		app.getAllPosts(w)
 
 	case "create-post":
-		// 创建帖子 → 转发给 post-service
 		app.createPost(w, requestPayload.Post)
 
 	case "update-post":
-		// 更新帖子 → 转发给 post-service
 		app.updatePost(w, requestPayload.Post)
 
 	case "delete-post":
-		// 删除帖子 → 转发给 post-service
 		app.deletePost(w, requestPayload.DeletePost)
 
 	default:
@@ -211,17 +181,15 @@ func (app *Config) getResource(w http.ResponseWriter, r *http.Request, resource 
 		return
 	}
 
-	// GET 请求不需要 body，传 r 让 Cookie 可以复制
 	app.forwardToAuthService(w, r, "GET", url, nil)
 }
 
 func (app *Config) oauthGoogleLogin(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Forwarding browser to authentication-service Google OAuth login")
 
-	// 直接用 http.Client 发请求获取 OAuth URL
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse // 不自动跟随重定向
+			return http.ErrUseLastResponse
 		},
 	}
 
@@ -232,15 +200,13 @@ func (app *Config) oauthGoogleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	// Broker 拿到 Location 后直接 302 给浏览器
 	if resp.StatusCode == http.StatusTemporaryRedirect || resp.StatusCode == http.StatusFound {
 		location := resp.Header.Get("Location")
 		log.Printf("Redirecting browser to %s", location)
-		http.Redirect(w, r, location, http.StatusFound) // 直接 302 浏览器跳转
+		http.Redirect(w, r, location, http.StatusFound)
 		return
 	}
 
-	// 如果认证服务返回错误 JSON
 	var payload struct {
 		Error   bool   `json:"error"`
 		Message string `json:"message"`
@@ -253,13 +219,12 @@ func (app *Config) oauthGoogleLogin(w http.ResponseWriter, r *http.Request) {
 	app.writeJSON(w, resp.StatusCode, payload)
 }
 
-// forwardToAuthService 通用转发函数
 func (app *Config) forwardToAuthService(
 	w http.ResponseWriter,
 	r *http.Request,
 	method string,
 	url string,
-	body any, // 可以传结构体，内部会 marshal
+	body any,
 ) {
 	var reader *bytes.Reader
 	if body != nil {
@@ -284,7 +249,7 @@ func (app *Config) forwardToAuthService(
 		req.Header.Set("Content-Type", "application/json")
 	}
 
-	if r != nil { // 只有 r 不为 nil 时才复制 cookie
+	if r != nil {
 		for _, c := range r.Cookies() {
 			req.AddCookie(c)
 		}
@@ -298,7 +263,6 @@ func (app *Config) forwardToAuthService(
 	}
 	defer resp.Body.Close()
 
-	// 把认证服务返回的 Cookie 写回浏览器
 	for _, c := range resp.Cookies() {
 		http.SetCookie(w, c)
 	}
@@ -310,7 +274,6 @@ func (app *Config) forwardToAuthService(
 		return
 	}
 
-	// 根据认证服务返回的 error 和状态码统一处理
 	if payload.Error {
 		log.Printf("Authentication service returned error: %s", payload.Message)
 		statusCode := resp.StatusCode
@@ -321,7 +284,6 @@ func (app *Config) forwardToAuthService(
 		return
 	}
 
-	// 转发认证服务的状态码和响应
 	app.writeJSON(w, resp.StatusCode, payload)
 }
 
@@ -367,7 +329,6 @@ func (app *Config) deletePost(w http.ResponseWriter, p DeletePostPayload) {
 	body := map[string]int{"authorId": p.AuthorID}
 	app.forwardToPostService(w, "DELETE", url, body)
 }
-
 
 // RESTful API handlers for posts
 func (app *Config) GetAllPostsREST(w http.ResponseWriter, r *http.Request) {
@@ -500,49 +461,34 @@ func (app *Config) sendMailViaRabbit(to, subject, message string) error {
 	return emitter.SendMail(to, subject, message)
 }
 
-// logEventViaRabbit 通过 RabbitMQ 将日志事件发送给 logger-service。
-// w: HTTP 响应对象，用于返回结果给调用者
-// l: 日志内容，类型 LogPayload（包含 Name 和 Data 字段）
 func (app *Config) logEventViaRabbit(w http.ResponseWriter, l LogPayload) {
-	// 调用 pushToQueue 将日志发送到 RabbitMQ 队列
 	err := app.pushToQueue(l.Name, l.Data)
 	if err != nil {
-		// 如果发送失败，返回 JSON 错误响应
+
 		app.errorJSON(w, err)
 		return
 	}
 
-	// 构造返回给客户端的 JSON 响应
 	var payload jsonResponse
 	payload.Error = false
 	payload.Message = "logged via RabbitMQ"
 
-	// 写回 HTTP 响应，状态码 202 Accepted 表示请求已接收
 	app.writeJSON(w, http.StatusAccepted, payload)
 }
 
-// pushToQueue 将消息发送到 RabbitMQ 队列
-// name: 日志类型，例如 "log.INFO" 或 "log.ERROR"
-// msg: 日志内容
 func (app *Config) pushToQueue(name, msg string) error {
-	// 创建一个新的 RabbitMQ Emitter，用于发送消息
 	emitter, err := event.NewEventEmitter(app.Rabbit)
 	if err != nil {
-		return err // 如果创建失败直接返回错误
+		return err
 	}
 
-	// 构造要发送的日志负载
 	payload := LogPayload{
-		Name: name, // 日志类型
-		Data: msg,  // 日志内容
+		Name: name,
+		Data: msg,
 	}
 
-	// 将 payload 转成 JSON 字符串
-	// json.MarshalIndent 可以格式化输出，方便调试
 	j, _ := json.MarshalIndent(&payload, "", "\t")
 
-	// 调用 Emitter.Push 发布消息到交换机
-	// 这里 routing key 固定为 "log.INFO"，可以根据需求修改
 	err = emitter.Push(string(j), "log.INFO")
 	if err != nil {
 		return err
@@ -614,10 +560,6 @@ func (app *Config) ProfileREST(w http.ResponseWriter, r *http.Request) {
 	log.Println("RESTful: GET /auth/profile")
 	app.forwardToAuthService(w, r, "GET", "http://authentication-service/auth/profile", nil)
 }
-
-// =======================
-// RESTful Favorites API Handlers
-// =======================
 
 func (app *Config) GetUserFavoriteIDsREST(w http.ResponseWriter, r *http.Request) {
 	userId := chi.URLParam(r, "userId")

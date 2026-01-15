@@ -1,13 +1,9 @@
-# Go Microservices Project
+# Go Microservices - Rental Property Platform
 
-This project implements a **microservices-based architecture in Go**, designed around clear service boundaries, asynchronous event handling, and scalable infrastructure.
-It includes services for **authentication, mail delivery, logging, a broker API gateway**, and a newly added **Post / Rent List service backed by PostgreSQL and exposed via a RESTful API**.
-
-The system supports **JWT-based authentication**, **Google OAuth**, **email verification**, **event-driven logging with RabbitMQ**, and **CRUD operations against PostgreSQL**.
+A distributed microservices-based rental property listing application built with Go. This platform enables users to browse, list, and manage rental properties with features like user authentication, favorites, and email notifications.
 
 <table>
   <tr>
-    <!-- 左边一列 -->
     <td width="55%" align="center">
       <img src="./public/home_page.png" alt="home page">
     </td>
@@ -21,259 +17,251 @@ The system supports **JWT-based authentication**, **Google OAuth**, **email veri
 
 ## Architecture Overview
 
-The system consists of the following services:
-
-### Core Services
-
-- **Broker Service**
-
-  - Acts as an API Gateway.
-  - Routes incoming HTTP requests to downstream microservices.
-  - Centralizes request validation and orchestration.
-
-- **Authentication Service**
-
-  - Handles:
-
-    - User registration and login
-    - JWT access & refresh token generation
-    - Google OAuth login
-    - Email verification via one-time codes
-
-  - Uses:
-
-    - PostgreSQL for persistent user data
-    - Redis for verification codes and token-related state
-
-- **Mail Service**
-
-  - Sends verification and notification emails.
-  - Uses SMTP configuration provided via environment variables.
-
-- **Logger Service**
-
-  - Receives structured log events.
-  - Publishes and consumes log messages via RabbitMQ.
-
-- **Listener Service**
-
-  - Subscribes to RabbitMQ queues.
-  - Processes asynchronous events (e.g., logging, audit events).
-
----
-
-### Domain Services
-
-- **Post / Rent List Service (NEW)**
-
-  - Provides a RESTful API for managing rental posts.
-  - Supports CRUD operations on rent listings.
-  - Uses PostgreSQL as the primary datastore.
-  - Designed to be consumed by:
-
-    - The Broker Service
-    - Authenticated front-end clients
-
-  - Enforces authorization via JWT middleware.
-
----
-
-### Front-end
-
-- **Go-based Web Server**
-
-  - Serves as a lightweight backend for UI integration.
-
-- **TypeScript / React Front-end**
-
-  - User-facing application.
-  - Supports authentication, verification flows, and rent list interaction.
-
----
-
-### Communication & Infrastructure
-
-- **Service-to-service communication:** HTTP (REST)
-- **Asynchronous messaging:** RabbitMQ
-- **Persistent storage:** PostgreSQL
-- **Caching / temporary state:** Redis
-- **Containerization:** Docker & Docker Compose
-
----
-
-## System Architecture Diagram (Conceptual)
-
 ```
-Client (React)
-     |
-     v
-Broker Service (API Gateway)
-     |
-     +--> Auth Service ----> PostgreSQL / Redis
-     |
-     +--> Post Service ----> PostgreSQL
-     |
-     +--> Mail Service ----> SMTP
-     |
-     +--> Logger Service --> RabbitMQ --> Listener
+                                    ┌─────────────────┐
+                                    │    Frontend     │
+                                    │   (Go/HTML)     │
+                                    └────────┬────────┘
+                                             │
+                                             ▼
+┌────────────────────────────────────────────────────────────────────────────┐
+│                          Broker Service (API Gateway)                       │
+│                                  :8080                                      │
+└───────┬──────────┬──────────┬──────────┬──────────┬──────────┬─────────────┘
+        │          │          │          │          │          │
+        ▼          ▼          ▼          ▼          ▼          ▼
+   ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐
+   │  Auth  │ │  Post  │ │Favorite│ │ Logger │ │  Mail  │ │Listener│
+   │Service │ │Service │ │Service │ │Service │ │Service │ │Service │
+   │ :8081  │ │        │ │        │ │        │ │        │ │        │
+   └───┬────┘ └───┬────┘ └───┬────┘ └───┬────┘ └────────┘ └───┬────┘
+       │          │          │          │                      │
+       ▼          ▼          ▼          ▼                      ▼
+  ┌─────────┐ ┌─────────┐         ┌─────────┐            ┌──────────┐
+  │PostgreSQL││PostgreSQL│        │ MongoDB │            │ RabbitMQ │
+  │ + Redis │ │         │         │         │            │          │
+  └─────────┘ └─────────┘         └─────────┘            └──────────┘
 ```
 
----
+## Technology Stack
 
-## Prerequisites
+| Category         | Technology                              |
+| ---------------- | --------------------------------------- |
+| Language         | Go 1.18 - 1.25                          |
+| Web Framework    | Chi v5                                  |
+| Databases        | PostgreSQL 14.0, MongoDB 4.2, Redis 8.4 |
+| Message Queue    | RabbitMQ 3.9                            |
+| Authentication   | JWT, OAuth2 (Google)                    |
+| Containerization | Docker, Docker Compose                  |
+| Email            | SMTP with go-simple-mail                |
 
-- Docker & Docker Compose
-- Go 1.19+ (for local builds)
-- Node.js 18+ (for front-end development)
+## Services
 
----
+### Broker Service (API Gateway)
 
-## Quick Start
+Central entry point that routes all client requests to appropriate backend services.
 
-1. **Clone the repository**
+- **Port**: 8080
+- Handles CORS, request forwarding, and OAuth routes
 
-   ```bash
-   git clone <your-repo-url>
-   cd <project-directory>
-   ```
+### Authentication Service
 
-2. **Create environment variables**
+Manages user authentication and authorization.
 
-   - Copy `.env.example` (if provided) or define variables directly.
-   - Refer to `docker-compose.yml` for required values.
+- **Port**: 8081
+- JWT token management (access + refresh tokens)
+- User registration with email verification
+- Password reset flow
+- Google OAuth2 integration
+- Session management via Redis
 
-3. **Build and start all services**
+### Post Service
 
-   ```bash
-   make up_build
-   ```
+Manages rental property listings.
 
----
+- CRUD operations for posts
+- Geolocation-based search (lat/lng with radius)
+- Property details (bedrooms, bathrooms, price, images)
 
-## Building and Running
+### Favourite Service
 
-### Using Makefile
+Manages user favorites/wishlist.
 
-| Command            | Description                             |
-| ------------------ | --------------------------------------- |
-| `make up_build`    | Build all services and start containers |
-| `make up`          | Start services without rebuilding       |
-| `make down`        | Stop and remove containers              |
-| `make build_auth`  | Build authentication service only       |
-| `make build_front` | Build front-end                         |
-| `make start`       | Start front-end                         |
-| `make stop`        | Stop front-end                          |
+- Add/remove favorites
+- Bulk sync from localStorage
 
----
+### Logger Service
+
+Centralized logging to MongoDB.
+
+- Collects logs from all services
+- Log levels: INFO, WARNING, ERROR
+
+### Mail Service
+
+Handles all email communications.
+
+- Email verification
+- Password reset emails
+- HTML email templates
+
+### Listener Service
+
+Consumes messages from RabbitMQ.
+
+- Processes log events
+- Triggers email notifications
+- Handles async operations
+
+## Getting Started
+
+### Prerequisites
+
+- Docker and Docker Compose
+- Go 1.18+ (for local development)
+- Make (optional)
+
+### Running with Docker Compose
+
+**Windows:**
+
+```bash
+cd project
+make up_build
+```
+
+**Linux:**
+
+```bash
+cd linux_project
+make up_build
+```
 
 ### Manual Docker Compose
 
 ```bash
-docker-compose up --build
+cd project
+docker-compose up -d --build
 ```
 
----
+### Stopping Services
 
-## Configuration
+```bash
+make down
+```
 
-All configuration is managed via environment variables defined in `docker-compose.yml`.
+## API Endpoints
 
-### Key Variables
+### Authentication
 
-#### Database (PostgreSQL)
+| Method | Endpoint                | Description            |
+| ------ | ----------------------- | ---------------------- |
+| POST   | `/auth/login`           | User login             |
+| POST   | `/auth/register`        | User registration      |
+| POST   | `/auth/verify-email`    | Verify email address   |
+| POST   | `/auth/forgot-password` | Request password reset |
+| POST   | `/auth/reset-password`  | Reset password         |
+| GET    | `/auth/profile`         | Get user profile       |
+| GET    | `/oauth/google/login`   | Google OAuth login     |
 
-- `DATABASE_URL`
-- `POSTGRES_USER`
-- `POSTGRES_PASSWORD`
-- `POSTGRES_DB`
+### Posts
 
-#### Redis
+| Method | Endpoint                   | Description         |
+| ------ | -------------------------- | ------------------- |
+| GET    | `/posts`                   | Get all posts       |
+| GET    | `/posts/{id}`              | Get single post     |
+| GET    | `/posts/author/{authorId}` | Get posts by author |
+| POST   | `/posts`                   | Create new post     |
+| PUT    | `/posts/{id}`              | Update post         |
+| DELETE | `/posts/{id}`              | Delete post         |
 
-- `REDIS_HOST`
-- `REDIS_PORT`
+### Favorites
 
-#### OAuth (Google)
+| Method | Endpoint                       | Description             |
+| ------ | ------------------------------ | ----------------------- |
+| GET    | `/favorites/{userId}/ids`      | Get user's favorite IDs |
+| POST   | `/favorites`                   | Add to favorites        |
+| DELETE | `/favorites/{userId}/{postId}` | Remove from favorites   |
+| POST   | `/favorites/sync`              | Bulk sync favorites     |
 
-- `GOOGLE_CLIENT_ID`
-- `GOOGLE_CLIENT_SECRET`
-- `GOOGLE_REDIRECT_URL`
-
-#### Mail (SMTP)
-
-- `SMTP_HOST`
-- `SMTP_PORT`
-- `SMTP_USER`
-- `SMTP_PASSWORD`
-
-#### JWT
-
-- `JWT_SECRET`
-- `JWT_REFRESH_SECRET`
-
----
-
-### Post / Rent List Service (NEW)
-
-Base path: `/posts`
-
-| Method | Endpoint      | Description            |
-| ------ | ------------- | ---------------------- |
-| POST   | `/posts`      | Create a new rent post |
-| GET    | `/posts`      | List all rent posts    |
-| GET    | `/posts/{id}` | Get a single post      |
-| PUT    | `/posts/{id}` | Update a post          |
-| DELETE | `/posts/{id}` | Delete a post          |
-
-**Authorization**
-
-- Requires a valid JWT access token.
-- Token is validated by middleware.
-
----
-
-### Mail Service
-
-- `POST /send`
-
----
-
-## Service Details
+## Environment Variables
 
 ### Authentication Service
 
-- JWT access & refresh tokens
-- Email verification codes stored in Redis
-- OAuth2 integration with Google
-
-### Post Service
-
-- RESTful API design
-- PostgreSQL schema managed via migrations
-- Clean separation of:
-  - handlers
-  - services
-  - repositories
-- Designed for extension (pagination, filtering, search)
+```env
+DSN=postgres://user:password@postgres:5432/users
+REDIS_ADDR=redis:6379
+REDIS_PASSWORD=
+ACCESS_SECRET=your_access_secret
+REFRESH_SECRET=your_refresh_secret
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_REDIRECT_URL=http://localhost:8080/oauth/google/callback
+```
 
 ### Mail Service
 
-- Generates and sends verification emails
-- Configurable SMTP provider
-- Implemented in `mail_service.go`
+```env
+MAIL_DOMAIN=your_domain
+MAIL_HOST=smtp.your-provider.com
+MAIL_PORT=587
+MAIL_ENCRYPTION=tls
+MAIL_USERNAME=your_username
+MAIL_PASSWORD=your_password
+FROM_NAME=Your App Name
+FROM_ADDRESS=noreply@your-domain.com
+```
 
-### Broker Service
+### Post & Favourite Services
 
-- Central request dispatcher
-- Forwards requests using functions such as `forwardToAuthService`
-- Simplifies client-side API usage
+```env
+DSN=postgres://user:password@postgres:5432/posts
+```
 
-### Logger & Listener Services
+## Project Structure
 
-- Event-driven architecture using RabbitMQ
-- Decouples logging from request lifecycle
-- Supports future observability extensions
+```
+go-micro/
+├── broker-service/          # API Gateway
+├── authentication-service/  # Auth & user management
+├── post-service/           # Property listings
+├── favourite-service/      # User favorites
+├── logger-service/         # Centralized logging
+├── mail-service/           # Email notifications
+├── listener-service/       # Message queue consumer
+├── front-end/              # Web UI (Go templates)
+├── project/                # Windows Docker Compose
+├── linux_project/          # Linux Docker Compose
+└── public/                 # Static assets
+```
 
----
+## Message Queue Events
+
+### Log Events (logs_topic exchange)
+
+- `log.INFO` - Information logs
+- `log.WARNING` - Warning logs
+- `log.ERROR` - Error logs
+
+### App Events (app_events exchange)
+
+- `mail.send` - Send generic email
+- `mail.verification` - Send verification email
+- `mail.password_reset` - Send password reset email
+- `notification.send` - Send notification
+
+## Makefile Commands
+
+| Command               | Description                   |
+| --------------------- | ----------------------------- |
+| `make up`             | Start all containers          |
+| `make up_build`       | Build and start containers    |
+| `make down`           | Stop all containers           |
+| `make build_broker`   | Build broker service binary   |
+| `make build_auth`     | Build auth service binary     |
+| `make build_logger`   | Build logger service binary   |
+| `make build_mail`     | Build mail service binary     |
+| `make build_listener` | Build listener service binary |
 
 ## License
 

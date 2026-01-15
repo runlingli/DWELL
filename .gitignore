@@ -1,5 +1,5 @@
 ############################
-# 通用
+# general
 ############################
 .DS_Store
 Thumbs.db
@@ -18,12 +18,11 @@ Thumbs.db
 !.vscode/launch.json
 !.vscode/tasks.json
 *.code-workspace
-.claude
+
 
 ############################
 # Go
 ############################
-# 编译产物
 *.exe
 *.exe~
 *.dll
@@ -44,7 +43,7 @@ Thumbs.db
 coverage.out
 coverage.html
 
-# Go build cache（一般不需要提交）
+# Go build cache
 /bin/
 /dist/
 /project/db-data/
@@ -53,10 +52,9 @@ coverage.html
 ############################
 # React / TypeScript
 ############################
-# 依赖
 node_modules/
 
-# 构建产物
+# build
 build/
 dist/
 out/
@@ -70,7 +68,7 @@ out/
 *.tsbuildinfo
 
 ############################
-# 包管理器
+# npm
 ############################
 npm-debug.log*
 yarn-debug.log*
@@ -78,14 +76,14 @@ yarn-error.log*
 pnpm-debug.log*
 
 ############################
-# 环境变量
+# environment
 ############################
 .env
 .env.*
 !.env.example
 
 ############################
-# 测试
+# test
 ############################
 coverage/
 .nyc_output/
@@ -98,14 +96,15 @@ coverage/
 docker-compose.override.yml
 
 ############################
-# IDE / 编辑器（其他）
+# IDE
 ############################
 .idea/
 *.iml
 
 
 ############################
-# 临时文件
+# temp
 ############################
 tmp/
 temp/
+.claude
